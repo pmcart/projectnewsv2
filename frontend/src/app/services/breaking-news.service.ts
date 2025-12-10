@@ -28,6 +28,7 @@ export interface BreakingNewsEnrichment {
     equipment?: string[];
   };
   event_type?: string;
+  additional_links? : { text?: string; link: string }[];
   future_scenarios?: { scenario: string; likelihood: number }[];
   hash?: string;
   knock_on_effects?: { effect: string; likelihood: number }[];

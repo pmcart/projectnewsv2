@@ -339,32 +339,30 @@
             </div>
 
             <!-- Media links (X / TikTok / YouTube / etc.) -->
-            <div *ngIf="m.media_links?.length" class="space-y-2">
+            <div *ngIf="detail.additional_links?.length" class="space-y-2">
               <h4 class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
                 Media links
               </h4>
               <div class="space-y-1.5 text-xs">
                 <a
-                  *ngFor="let link of m.media_links"
+                  *ngFor="let link of detail.additional_links"
                   [href]="link.link"
                   target="_blank"
                   rel="noopener noreferrer"
                   class="block rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2 hover:border-sky-500/60 hover:bg-slate-900 transition-colors"
                 >
                   <div class="flex items-center justify-between gap-2">
-                    <span class="font-medium text-slate-100 text-[11px]">
-                      {{ link.title || link.displayLink || 'Media link' }}
-                    </span>
-                    <span class="text-[10px] text-slate-500">
-                      {{ link.displayLink || 'external' }}
+
+                    <span class="text-[14px] text-white-500">
+                      {{ link.text }}
                     </span>
                   </div>
-                  <p
-                    *ngIf="link.snippet"
-                    class="mt-1 text-[10px] text-slate-400 line-clamp-2"
-                  >
-                    {{ link.snippet }}
-                  </p>
+                <p
+  *ngIf="link.link"
+  class="mt-1 text-[10px] text-slate-400 line-clamp-2"
+>
+  {{ getDomain(link.link) }}
+</p>
                 </a>
               </div>
             </div>

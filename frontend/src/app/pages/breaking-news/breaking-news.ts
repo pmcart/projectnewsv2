@@ -105,4 +105,12 @@ export class BreakingNewsComponent implements OnInit {
   trackById(_index: number, item: BreakingNews) {
     return item._id;
   }
+
+  getDomain(url: string): string {
+  try {
+    return new URL(url).hostname;  // e.g. "google.news"
+  } catch {
+    return url; // fallback if it's not a valid URL
+  }
+}
 }
