@@ -1,0 +1,377 @@
+<!-- src/app/pages/breaking-news/breaking-news.html -->
+<div class="grid grid-cols-3 gap-4">
+  <!-- LEFT COLUMN: ARTICLES (1/3 width) -->
+  <div class="col-span-1 space-y-4">
+    <div class="flex items-center justify-between mb-2">
+      <h2 class="text-sm font-semibold">Breaking news</h2>
+
+      <button
+        type="button"
+        (click)="loadBreakingNews()"
+        class="text-xs px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700"
+      >
+        Refresh
+      </button>
+    </div>
+
+    <!-- Loading state -->
+    <div *ngIf="loading()" class="text-xs text-slate-400">
+      Loading latest breaking news...
+    </div>
+
+    <!-- Error state -->
+    <div *ngIf="!loading() && error()" class="text-xs text-red-400">
+      {{ error() }}
+    </div>
+
+    <!-- Empty state -->
+    <div
+      *ngIf="!loading() && !error() && breakingNews().length === 0"
+      class="text-xs text-slate-400"
+    >
+      No breaking news found.
+    </div>
+
+    <!-- List of breaking news -->
+    <div
+      *ngIf="!loading() && !error() && breakingNews().length > 0"
+      class="space-y-3"
+    >
+      <article
+        *ngFor="let item of breakingNews(); trackBy: trackById"
+        (click)="openBreakingNewsDetail(item.tweetId!)"
+        class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 cursor-pointer hover:border-slate-600 transition-colors"
+      >
+        <header class="flex items-start justify-between gap-3 mb-2">
+          <div>
+            <h3 class="text-sm font-semibold">
+              {{ item.account }}
+            </h3>
+            <p class="text-[11px] text-slate-400 line-clamp-3">
+              {{ item.text }}
+            </p>
+          </div>
+          <span class="text-[10px] text-slate-500 whitespace-nowrap">
+            {{ item.datetime | date: 'short' }}
+          </span>
+        </header>
+
+        <div
+          *ngIf="(item.images?.length || item.videos?.length)"
+          class="mt-3 space-y-3"
+        >
+          <!-- Images -->
+          <div *ngIf="item.images?.length" class="grid grid-cols-2 gap-2">
+            <img
+              *ngFor="let img of item.images"
+              [src]="img"
+              alt="Breaking news image"
+              class="w-full rounded-xl object-cover max-h-48"
+              loading="lazy"
+            />
+          </div>
+
+          <!-- Videos -->
+          <div *ngIf="item.videos?.length" class="space-y-2">
+            <video
+              *ngFor="let vid of item.videos"
+              [src]="vid"
+              controls
+              class="w-full rounded-xl max-h-64"
+            ></video>
+          </div>
+        </div>
+      </article>
+    </div>
+  </div>
+
+  <!-- RIGHT COLUMN: ENRICHMENT DETAILS (2/3 width) -->
+  <div class="col-span-2 bg-slate-900/40 rounded-2xl p-4 border border-slate-800">
+    <!-- Loading / error / empty states -->
+    <div *ngIf="enrichmentLoading()" class="text-xs text-slate-400">
+      Loading enrichment details...
+    </div>
+
+    <div *ngIf="!enrichmentLoading() && enrichmentError()" class="text-xs text-red-400">
+      {{ enrichmentError() }}
+    </div>
+
+    <div
+      *ngIf="!enrichmentLoading() && !enrichmentError() && !enrichment()"
+      class="text-xs text-slate-500 h-full flex items-center justify-center text-center"
+    >
+      Select a breaking news item on the left to see detailed analysis.
+    </div>
+
+    <!-- Enrichment content -->
+    <div
+      *ngIf="!enrichmentLoading() && !enrichmentError() && enrichment() as detail"
+      class="space-y-4"
+    >
+      <!-- Header -->
+      <header class="flex items-start justify-between gap-4">
+        <div>
+          <p class="text-[11px] text-slate-400 uppercase tracking-wide">
+            Enriched analysis
+          </p>
+          <h2 class="text-sm font-semibold mt-1">
+            {{ detail.category || 'Uncategorised' }}
+            <span *ngIf="detail.event_type" class="text-[11px] text-slate-400">
+              · {{ detail.event_type }}
+            </span>
+          </h2>
+        </div>
+
+        <div class="text-right text-[11px] text-slate-400 space-y-1">
+          <div *ngIf="detail.risk_score !== undefined">
+            <span class="block text-[10px] uppercase tracking-wide">Risk</span>
+            <span class="text-sm font-semibold">
+              {{ detail.risk_score | number: '1.0-2' }}
+            </span>
+          </div>
+          <div *ngIf="detail.confidence !== undefined">
+            <span class="block text-[10px] uppercase tracking-wide">Confidence</span>
+            <span class="text-sm font-semibold">
+              {{ detail.confidence | number: '1.0-2' }}
+            </span>
+          </div>
+          <div *ngIf="detail.credibility !== undefined">
+            <span class="block text-[10px] uppercase tracking-wide">Credibility</span>
+            <span class="text-sm font-semibold">
+              {{ detail.credibility | number: '1.0-2' }}
+            </span>
+          </div>
+        </div>
+      </header>
+
+      <!-- Context -->
+      <section *ngIf="detail.context">
+        <h3 class="text-[11px] font-semibold text-slate-300 mb-1">
+          Context
+        </h3>
+        <p class="text-xs text-slate-200 leading-relaxed">
+          {{ detail.context }}
+        </p>
+      </section>
+
+      <!-- Entities -->
+      <section *ngIf="detail.entities">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+          <div *ngIf="detail.entities.people?.length">
+            <h4 class="text-[11px] font-semibold text-slate-300 mb-1">People</h4>
+            <div class="flex flex-wrap gap-1">
+              <span
+                *ngFor="let person of detail.entities.people"
+                class="px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700"
+              >
+                {{ person }}
+              </span>
+            </div>
+          </div>
+
+          <div *ngIf="detail.entities.organizations?.length">
+            <h4 class="text-[11px] font-semibold text-slate-300 mb-1">Organizations</h4>
+            <div class="flex flex-wrap gap-1">
+              <span
+                *ngFor="let org of detail.entities.organizations"
+                class="px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700"
+              >
+                {{ org }}
+              </span>
+            </div>
+          </div>
+
+          <div *ngIf="detail.entities.equipment?.length">
+            <h4 class="text-[11px] font-semibold text-slate-300 mb-1">Equipment</h4>
+            <div class="flex flex-wrap gap-1">
+              <span
+                *ngFor="let eq of detail.entities.equipment"
+                class="px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700"
+              >
+                {{ eq }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Locations -->
+      <section *ngIf="detail.locations?.length">
+        <h3 class="text-[11px] font-semibold text-slate-300 mb-1">
+          Locations
+        </h3>
+        <ul class="text-xs text-slate-200 space-y-1">
+          <li *ngFor="let loc of detail.locations">
+            • {{ loc.place || 'Unknown location' }}
+            <span *ngIf="loc.country" class="text-slate-400">
+              ({{ loc.country }})
+            </span>
+          </li>
+        </ul>
+      </section>
+
+      <!-- Future scenarios -->
+      <section *ngIf="detail.future_scenarios?.length">
+        <h3 class="text-[11px] font-semibold text-slate-300 mb-1">
+          Future scenarios
+        </h3>
+        <ul class="space-y-1.5 text-xs text-slate-200">
+          <li *ngFor="let fs of detail.future_scenarios">
+            <div class="flex items-center justify-between gap-2">
+              <span>• {{ fs.scenario }}</span>
+              <span class="text-[10px] text-slate-400 whitespace-nowrap">
+                Likelihood: {{ (fs.likelihood || 0) * 100 | number: '1.0-0' }}%
+              </span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- Knock-on effects -->
+      <section *ngIf="detail.knock_on_effects?.length">
+        <h3 class="text-[11px] font-semibold text-slate-300 mb-1">
+          Knock-on effects
+        </h3>
+        <ul class="space-y-1.5 text-xs text-slate-200">
+          <li *ngFor="let k of detail.knock_on_effects">
+            <div class="flex items-center justify-between gap-2">
+              <span>• {{ k.effect }}</span>
+              <span class="text-[10px] text-slate-400 whitespace-nowrap">
+                Likelihood: {{ (k.likelihood || 0) * 100 | number: '1.0-0' }}%
+              </span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- Sources -->
+      <section *ngIf="detail.sources_to_verify?.length || detail.tweet_url">
+        <h3 class="text-[11px] font-semibold text-slate-300 mb-1">
+          Sources / verification
+        </h3>
+        <ul class="text-xs text-slate-200 space-y-1">
+          <li *ngIf="detail.tweet_url">
+            <a
+              [href]="detail.tweet_url"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="underline text-sky-400 hover:text-sky-300"
+            >
+              View original post
+            </a>
+          </li>
+          <li *ngFor="let src of detail.sources_to_verify">
+            <a
+              [href]="src"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="underline text-sky-400 hover:text-sky-300 break-all"
+            >
+              {{ src }}
+            </a>
+          </li>
+        </ul>
+      </section>
+
+      <!-- Meta -->
+      <section class="border-t border-slate-800 pt-3 text-[10px] text-slate-500 flex flex-wrap gap-3">
+        <span *ngIf="detail.time_window">
+          Time window: {{ detail.time_window }}
+        </span>
+        <span *ngIf="detail.tweet_datetime">
+          Tweet: {{ detail.tweet_datetime | date: 'short' }}
+        </span>
+        <span *ngIf="detail.model_used">
+          Model: {{ detail.model_used }}
+        </span>
+        <span *ngIf="detail.needs_higher_model">
+          Needs higher model
+        </span>
+        <span *ngIf="detail.hash">
+          Hash: {{ detail.hash }}
+        </span>
+      </section>
+
+            <!-- Related media (images + links) -->
+      <section class="space-y-2">
+        <!-- Media loading / error states -->
+        <div *ngIf="mediaLoading()" class="text-[11px] text-slate-400">
+          Loading related media...
+        </div>
+
+        <div *ngIf="!mediaLoading() && mediaError()" class="text-[11px] text-red-400">
+          {{ mediaError() }}
+        </div>
+
+        <!-- Actual media content -->
+        <ng-container *ngIf="!mediaLoading() && !mediaError() && media() as m">
+          <!-- Only render if there is at least something -->
+          <div
+            *ngIf="(m.images?.length || m.media_links?.length)"
+            class="space-y-3 mt-2"
+          >
+            <h3 class="text-[11px] font-semibold text-slate-300">
+              Related media
+            </h3>
+
+            <!-- Images grid -->
+            <div *ngIf="m.images?.length" class="grid grid-cols-2 md:grid-cols-3 gap-2">
+              <a
+                *ngFor="let img of m.images"
+                [href]="img.contextLink || img.link"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="group block"
+              >
+                <img
+                  [src]="img.thumbnail || img.link"
+                  [alt]="img.title || 'Related image'"
+                  class="w-full rounded-xl object-cover max-h-32 md:max-h-40 border border-slate-800 group-hover:border-sky-500/60 transition-colors"
+                  loading="lazy"
+                />
+                <p
+                  *ngIf="img.title"
+                  class="mt-1 text-[10px] text-slate-400 line-clamp-2 group-hover:text-sky-400"
+                >
+                  {{ img.title }}
+                </p>
+              </a>
+            </div>
+
+            <!-- Media links (X / TikTok / YouTube / etc.) -->
+            <div *ngIf="m.media_links?.length" class="space-y-2">
+              <h4 class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
+                Media links
+              </h4>
+              <div class="space-y-1.5 text-xs">
+                <a
+                  *ngFor="let link of m.media_links"
+                  [href]="link.link"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="block rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2 hover:border-sky-500/60 hover:bg-slate-900 transition-colors"
+                >
+                  <div class="flex items-center justify-between gap-2">
+                    <span class="font-medium text-slate-100 text-[11px]">
+                      {{ link.title || link.displayLink || 'Media link' }}
+                    </span>
+                    <span class="text-[10px] text-slate-500">
+                      {{ link.displayLink || 'external' }}
+                    </span>
+                  </div>
+                  <p
+                    *ngIf="link.snippet"
+                    class="mt-1 text-[10px] text-slate-400 line-clamp-2"
+                  >
+                    {{ link.snippet }}
+                  </p>
+                </a>
+              </div>
+            </div>
+          </div>
+        </ng-container>
+      </section>
+
+    </div>
+  </div>
+</div>

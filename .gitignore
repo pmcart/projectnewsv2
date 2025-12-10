@@ -1,0 +1,104 @@
+############################
+# Global - all projects   #
+############################
+
+# Node modules (in api, jobs, frontend, or anywhere else)
+node_modules/
+chrome-profile/
+pw-profile/
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Env files
+.env
+.env.*
+*.local
+
+# IDE / editor
+.vscode/
+.idea/
+*.iml
+
+############################
+# Backend / Jobs (Node)   #
+############################
+
+# Build output
+dist/
+build/
+out/
+
+# Coverage
+coverage/
+*.lcov
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Optional npm cache
+.npm/
+
+# Optional eslint cache
+.eslintcache
+
+# REPL history
+.node_repl_history
+
+# Output of `npm pack`
+*.tgz
+
+# TypeScript build info
+*.tsbuildinfo
+
+############################
+# Frontend (Angular)      #
+############################
+
+# Angular build outputs (default)
+frontend/dist/
+frontend/tmp/
+
+# Angular / CLI cache
+.angular/
+.angular/cache/
+
+# If you use NX or similar (optional – delete if not using)
+nx-out/
+dist/apps/
+dist/libs/
+
+# Browserslist cache
+.browserslistrc
+
+# Storybook (if you use it)
+storybook-static/
+
+############################
+# Per-folder extras (opt) #
+############################
+
+# API-specific ignores
+api/dist/
+api/.env
+api/.env.*
+
+# Jobs-specific ignores
+jobs/dist/
+jobs/.env
+jobs/.env.*
+
+# Frontend-specific env (if present)
+frontend/.env
+frontend/.env.*

@@ -1,0 +1,76 @@
+<!-- src/app/pages/login/login.component.html -->
+<div class="min-h-screen flex items-center justify-center bg-slate-950">
+  <div class="absolute inset-0 -z-10 bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900"></div>
+
+  <div class="w-full max-w-md px-6">
+    <div class="bg-slate-900/80 border border-slate-800 rounded-2xl shadow-xl backdrop-blur p-8">
+      <div class="mb-8 text-center">
+        <div class="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-500/40 mb-3">
+          <span class="text-xl font-bold text-blue-400">PN</span>
+        </div>
+        <h1 class="text-2xl font-semibold text-white">Project News Admin</h1>
+        <p class="text-sm text-slate-400 mt-1">
+          Sign in to manage your content
+        </p>
+      </div>
+
+      <form (ngSubmit)="onSubmit()" [formGroup]="loginForm" class="space-y-5">
+        <!-- Email -->
+        <div>
+          <label class="block mb-1.5 text-sm font-medium text-slate-200" for="email">
+            Email
+          </label>
+          <input
+            id="email"
+            type="email"
+            formControlName="email"
+            class="bg-slate-900 border border-slate-700 text-slate-100 text-sm rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+            placeholder="you@example.com"
+          />
+          <p *ngIf="email?.invalid && (email?.touched || email?.dirty)" class="mt-1 text-xs text-red-400">
+            Please enter a valid email.
+          </p>
+        </div>
+
+        <!-- Password -->
+        <div>
+          <label class="block mb-1.5 text-sm font-medium text-slate-200" for="password">
+            Password
+          </label>
+          <input
+            id="password"
+            type="password"
+            formControlName="password"
+            class="bg-slate-900 border border-slate-700 text-slate-100 text-sm rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+            placeholder="••••••••"
+          />
+          <p *ngIf="password?.invalid && (password?.touched || password?.dirty)" class="mt-1 text-xs text-red-400">
+            Password must be at least 4 characters.
+          </p>
+        </div>
+
+        <!-- Error -->
+        <div *ngIf="errorMessage" class="text-xs text-red-400">
+          {{ errorMessage }}
+        </div>
+
+        <!-- Submit -->
+        <button
+          type="submit"
+          [disabled]="isSubmitting"
+          class="w-full inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-slate-900 transition"
+        >
+          <span *ngIf="!isSubmitting">Sign in</span>
+          <span *ngIf="isSubmitting" class="inline-flex items-center gap-2">
+            <span class="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
+            Signing in…
+          </span>
+        </button>
+      </form>
+
+      <p class="mt-6 text-xs text-center text-slate-500">
+        Dummy login – any email/password works for now.
+      </p>
+    </div>
+  </div>
+</div>

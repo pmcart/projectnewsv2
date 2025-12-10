@@ -1,0 +1,80 @@
+<div class="min-h-screen flex bg-slate-950 text-slate-100">
+  <!-- Sidebar -->
+  <aside class="w-64 border-r border-slate-800 bg-slate-900/80 backdrop-blur flex flex-col">
+    <div class="px-5 py-4 border-b border-slate-800 flex items-center gap-3">
+      <div class="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/50 flex items-center justify-center">
+        <span class="text-lg font-semibold text-blue-400">PN</span>
+      </div>
+      <div class="leading-tight">
+        <div class="text-sm font-semibold">Project News</div>
+        <div class="text-[11px] text-slate-400">Admin dashboard</div>
+      </div>
+    </div>
+
+    <nav class="flex-1 px-3 py-4 space-y-1">
+      <button
+        *ngFor="let item of menuItems"
+        type="button"
+        [routerLink]="item.link"
+        routerLinkActive="bg-slate-800 text-slate-100"
+        [routerLinkActiveOptions]="{ exact: true }"
+        class="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm transition
+               hover:bg-slate-800/70 hover:text-white text-slate-400"
+      >
+        <span class="text-lg">{{ item.icon }}</span>
+        <span>{{ item.label }}</span>
+      </button>
+    </nav>
+
+    <div class="px-4 py-3 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
+      <span>Logged in as <strong class="text-slate-200">admin@example.com</strong></span>
+      <button
+        type="button"
+        (click)="logout()
+        "
+        class="text-slate-400 hover:text-red-400 hover:underline"
+      >
+        Logout
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main content -->
+  <main class="flex-1 flex flex-col">
+    <!-- Top bar -->
+    <header class="h-16 border-b border-slate-800 flex items-center justify-between px-6 bg-slate-950/80 backdrop-blur">
+      <div>
+        <h1 class="text-lg font-semibold">
+          {{ currentTitle }}
+        </h1>
+        <p class="text-xs text-slate-400">
+          {{ currentSubtitle }}
+        </p>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <button
+          type="button"
+          class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium
+                 border border-slate-700 bg-slate-900 hover:bg-slate-800"
+        >
+          <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+          Live
+        </button>
+        <button
+          type="button"
+          class="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium
+                 bg-blue-600 hover:bg-blue-700"
+        >
+          + New article
+        </button>
+      </div>
+    </header>
+
+    <!-- Content area -->
+    <section class="flex-1 p-6 overflow-auto bg-gradient-to-br from-slate-950 via-slate-950 to-slate-900">
+      <!-- Child routes render here -->
+      <router-outlet></router-outlet>
+    </section>
+  </main>
+</div>
