@@ -6,6 +6,8 @@
 node_modules/
 chrome-profile/
 pw-profile/
+passwords.json
+
 # Logs
 logs
 *.log
@@ -102,3 +104,4 @@ jobs/.env.*
 # Frontend-specific env (if present)
 frontend/.env
 frontend/.env.*
+passwords,json
