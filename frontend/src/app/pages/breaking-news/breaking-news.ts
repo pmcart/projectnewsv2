@@ -6,12 +6,14 @@ import {
   BreakingNewsEnrichment,
   BreakingNewsMedia,          // 👈 import
 } from '../../services/breaking-news.service';
+import { MediaEmbedComponent } from '../../shared/components/media-embed/media-embed.component'; // 👈 import
+
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'app-breaking-news',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, MediaEmbedComponent],
   templateUrl: './breaking-news.html'
 })
 export class BreakingNewsComponent implements OnInit {
@@ -27,6 +29,9 @@ export class BreakingNewsComponent implements OnInit {
   media = signal<BreakingNewsMedia | null>(null);
   mediaLoading = signal(false);
   mediaError = signal<string | null>(null);
+
+  // Track which item is currently selected
+  selectedId = signal<string | null>(null);
 
   private readonly breakingNewsService = inject(BreakingNewsService);
   private readonly destroyRef = inject(DestroyRef);
@@ -47,6 +52,11 @@ export class BreakingNewsComponent implements OnInit {
           console.log('Breaking news loaded:', res);
           this.breakingNews.set(res);
           this.loading.set(false);
+
+          // Auto-select the first item once on initial load (or when none selected)
+          if (!this.selectedId() && res.length > 0 && res[0].tweetId) {
+            this.openBreakingNewsDetail(res[0].tweetId!);
+          }
         },
         error: (err) => {
           console.error('Failed to load breaking news', err);
@@ -57,6 +67,8 @@ export class BreakingNewsComponent implements OnInit {
   }
 
   openBreakingNewsDetail(tweetId: string) {
+    // mark selected
+    this.selectedId.set(tweetId);
     // reset state
     this.enrichment.set(null);
     this.media.set(null);

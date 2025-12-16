@@ -71,7 +71,7 @@ export interface BreakingNewsMedia {
   hash?: string | null;
   images?: BreakingNewsMediaImage[];
   locations?: { place?: string; country?: string; lat?: number | null; lon?: number | null }[];
-  media_links?: BreakingNewsMediaLink[];
+  video_links?: BreakingNewsMediaLink[];
   media_query?: string;
   searchedAt?: string;
   text?: string;

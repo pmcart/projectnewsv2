@@ -124,7 +124,7 @@ const breakingNewsMediaSchema = new Schema(
       default: [],
     },
 
-    media_links: {
+    video_links: {
       type: [mediaLinkSchema],
       default: [],
     },

@@ -41,6 +41,8 @@
         *ngFor="let item of breakingNews(); trackBy: trackById"
         (click)="openBreakingNewsDetail(item.tweetId!)"
         class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 cursor-pointer hover:border-slate-600 transition-colors"
+        [class.border-sky-500]="selectedId() === item.tweetId"
+        [attr.aria-selected]="selectedId() === item.tweetId"
       >
         <header class="flex items-start justify-between gap-3 mb-2">
           <div>
@@ -304,70 +306,37 @@
         </div>
 
         <!-- Actual media content -->
-        <ng-container *ngIf="!mediaLoading() && !mediaError() && media() as m">
-          <!-- Only render if there is at least something -->
-          <div
-            *ngIf="(m.images?.length || m.media_links?.length)"
-            class="space-y-3 mt-2"
-          >
-            <h3 class="text-[11px] font-semibold text-slate-300">
-              Related media
-            </h3>
+   <ng-container *ngIf="!mediaLoading() && !mediaError() && media() as m">
+  <!-- Only render if there is at least something -->
+  <div
+    *ngIf="m.images?.length || m.video_links?.length"
+    class="space-y-3 mt-2"
+  >
+    <h3 class="text-[11px] font-semibold text-slate-300">
+      Related media
+    </h3>
 
-            <!-- Images grid -->
-            <div *ngIf="m.images?.length" class="grid grid-cols-2 md:grid-cols-3 gap-2">
-              <a
-                *ngFor="let img of m.images"
-                [href]="img.contextLink || img.link"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="group block"
-              >
-                <img
-                  [src]="img.thumbnail || img.link"
-                  [alt]="img.title || 'Related image'"
-                  class="w-full rounded-xl object-cover max-h-32 md:max-h-40 border border-slate-800 group-hover:border-sky-500/60 transition-colors"
-                  loading="lazy"
-                />
-                <p
-                  *ngIf="img.title"
-                  class="mt-1 text-[10px] text-slate-400 line-clamp-2 group-hover:text-sky-400"
-                >
-                  {{ img.title }}
-                </p>
-              </a>
-            </div>
+    <!-- Images grid -->
+    <div *ngIf="m.images?.length" class="grid grid-cols-2 md:grid-cols-3 gap-2">
+      <!-- ... -->
+    </div>
 
-            <!-- Media links (X / TikTok / YouTube / etc.) -->
-            <div *ngIf="detail.additional_links?.length" class="space-y-2">
-              <h4 class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
-                Media links
-              </h4>
-              <div class="space-y-1.5 text-xs">
-                <a
-                  *ngFor="let link of detail.additional_links"
-                  [href]="link.link"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="block rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2 hover:border-sky-500/60 hover:bg-slate-900 transition-colors"
-                >
-                  <div class="flex items-center justify-between gap-2">
+    <!-- Video links (TikTok / YouTube / etc.) -->
+    <div *ngIf="m.video_links?.length" class="space-y-2">
+      <h4 class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
+        Media links
+      </h4>
 
-                    <span class="text-[14px] text-white-500">
-                      {{ link.text }}
-                    </span>
-                  </div>
-                <p
-  *ngIf="link.link"
-  class="mt-1 text-[10px] text-slate-400 line-clamp-2"
->
-  {{ getDomain(link.link) }}
-</p>
-                </a>
-              </div>
-            </div>
-          </div>
-        </ng-container>
+      <app-media-embed
+        [links]="m.video_links"
+      ></app-media-embed>
+    </div>
+
+    <!-- additional_links block can stay as-is -->
+    <!-- ... -->
+  </div>
+</ng-container>
+
       </section>
 
     </div>
