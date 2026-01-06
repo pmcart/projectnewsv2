@@ -19,6 +19,8 @@ app.get('/health', (req, res) => {
 
 // API routes
 app.use('/api/breaking-news', breakingNewsRoutes);
+app.use('/api/rss', require('./routes/rssFeedRoutes'));
+app.use('/api/jobs', require('./routes/jobsRoutes'));
 
 // Error handler (last)
 app.use(errorHandler);

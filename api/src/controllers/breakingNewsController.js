@@ -57,9 +57,32 @@ async function getBreakingNewsMediaById(req, res, next) {
   }
 }
 
+async function listBreakingNewsLive(req, res, next) {
+  try {
+    const { id } = req.params;
+    console.log('jobId:', id);
+    const limit = parseInt(req.query.limit, 10) || 50;
+    const offset = parseInt(req.query.offset, 10) || 0;
+    const since = req.query.since; // ISO string (optional)
+
+    const items = await breakingNewsRepo.getLiveByJobId({
+      id,
+      limit,
+      offset,
+      since,
+    });
+
+    res.json(items);
+  } catch (err) {
+    next(err);
+  }
+}
+
+
 module.exports = {
   listBreakingNews,
   getBreakingNewsById,
   getBreakingNewsEnrichmentById,
-  getBreakingNewsMediaById
+  getBreakingNewsMediaById,
+  listBreakingNewsLive
 };

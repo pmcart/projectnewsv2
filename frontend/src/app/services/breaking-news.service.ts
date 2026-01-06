@@ -14,6 +14,28 @@ export interface BreakingNews {
   tweetId: string;
 }
 
+export interface BreakingNewsLiveItem {
+  _id: string;
+  tweetId: string;
+  enrichmentTweetId?: string;
+  author?: string | null;
+  authorName?: string | null;
+  capturedAt?: string;
+  createdAt?: string;
+  lastSeenAt?: string;
+  enrichmentRef?: string;
+
+  images?: string[];
+  videos?: string[];
+
+  query?: string;
+  searchUrl?: string;
+  source?: string;
+  text?: string;
+  tweetCreatedAt?: string;
+  url?: string | null;
+}
+
 // 👇 new: enrichment interface (only fields we actually use)
 export interface BreakingNewsEnrichment {
   tweetId: string;
@@ -78,6 +100,8 @@ export interface BreakingNewsMedia {
 }
 
 
+
+
 @Injectable({
   providedIn: 'root'
 })
@@ -119,5 +143,18 @@ export class BreakingNewsService {
       `${this.baseUrl}/${tweetId}/media`,
       { headers: this.getHeaders() }
     );
+  }
+
+  getLiveById(jobId: string,limit = 50, offset = 0, since?: string): Observable<BreakingNewsLiveItem[]> {
+    const qs = new URLSearchParams({
+      limit: String(limit),
+      offset: String(offset),
+    });
+    if (since) qs.set('since', since);
+
+    return this.http.get<BreakingNewsLiveItem[]>(
+      `${this.baseUrl}/${jobId}/live?${qs.toString()}`,
+      { headers: this.getHeaders() }
+    );  
   }
 }

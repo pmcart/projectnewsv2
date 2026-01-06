@@ -1,9 +1,17 @@
 <!-- src/app/pages/breaking-news/breaking-news.html -->
-<div class="grid grid-cols-3 gap-4">
-  <!-- LEFT COLUMN: ARTICLES (1/3 width) -->
-  <div class="col-span-1 space-y-4">
-    <div class="flex items-center justify-between mb-2">
-      <h2 class="text-sm font-semibold">Breaking news</h2>
+<div class="p-3">
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-2">
+    <h2 class="text-sm font-semibold">Breaking news</h2>
+
+    <div class="flex items-center gap-2">
+      <button
+        type="button"
+        (click)="openLiveFeedModal(); startLiveFeed()"
+        class="text-xs px-2 py-1 rounded-lg bg-sky-700 hover:bg-sky-600 border border-sky-600"
+      >
+        View live feed
+      </button>
 
       <button
         type="button"
@@ -13,332 +21,219 @@
         Refresh
       </button>
     </div>
+  </div>
 
-    <!-- Loading state -->
-    <div *ngIf="loading()" class="text-xs text-slate-400">
-      Loading latest breaking news...
-    </div>
+  <!-- Main content layout -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
+    <!-- Left: list -->
+    <div class="lg:col-span-1 rounded-2xl border border-slate-800 bg-slate-900">
+      <div class="p-3 border-b border-slate-800">
+        <div *ngIf="loading()" class="text-xs text-slate-400">Loading…</div>
+        <div *ngIf="error()" class="text-xs text-red-400">{{ error() }}</div>
+      </div>
 
-    <!-- Error state -->
-    <div *ngIf="!loading() && error()" class="text-xs text-red-400">
-      {{ error() }}
-    </div>
-
-    <!-- Empty state -->
-    <div
-      *ngIf="!loading() && !error() && breakingNews().length === 0"
-      class="text-xs text-slate-400"
-    >
-      No breaking news found.
-    </div>
-
-    <!-- List of breaking news -->
-    <div
-      *ngIf="!loading() && !error() && breakingNews().length > 0"
-      class="space-y-3"
-    >
-      <article
-        *ngFor="let item of breakingNews(); trackBy: trackById"
-        (click)="openBreakingNewsDetail(item.tweetId!)"
-        class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 cursor-pointer hover:border-slate-600 transition-colors"
-        [class.border-sky-500]="selectedId() === item.tweetId"
-        [attr.aria-selected]="selectedId() === item.tweetId"
-      >
-        <header class="flex items-start justify-between gap-3 mb-2">
-          <div>
-            <h3 class="text-sm font-semibold">
-              {{ item.account }}
-            </h3>
-            <p class="text-[11px] text-slate-400 line-clamp-3">
-              {{ item.text }}
-            </p>
-          </div>
-          <span class="text-[10px] text-slate-500 whitespace-nowrap">
-            {{ item.datetime | date: 'short' }}
-          </span>
-        </header>
-
-        <div
-          *ngIf="(item.images?.length || item.videos?.length)"
-          class="mt-3 space-y-3"
+      <div class="max-h-[70vh] overflow-auto">
+        <button
+          *ngFor="let item of breakingNews(); trackBy: trackById"
+          type="button"
+          (click)="openBreakingNewsDetail(item.tweetId)"
+          class="w-full text-left p-3 border-b border-slate-800 hover:bg-slate-800/40"
+          [class.bg-slate-800]="selectedId() === item.tweetId"
         >
-          <!-- Images -->
-          <div *ngIf="item.images?.length" class="grid grid-cols-2 gap-2">
-            <img
-              *ngFor="let img of item.images"
-              [src]="img"
-              alt="Breaking news image"
-              class="w-full rounded-xl object-cover max-h-48"
-              loading="lazy"
-            />
+          <div class="text-xs text-slate-300 font-medium">
+            {{ item.account }}
           </div>
+          <div class="text-xs text-slate-200 mt-1 line-clamp-3 whitespace-pre-wrap">
+            {{ item.text || '—' }}
+          </div>
+          <div class="text-[11px] text-slate-500 mt-2">
+            {{ item.datetime || '' }}
+          </div>
+        </button>
 
-          <!-- Videos -->
-          <div *ngIf="item.videos?.length" class="space-y-2">
-            <video
-              *ngFor="let vid of item.videos"
-              [src]="vid"
-              controls
-              class="w-full rounded-xl max-h-64"
-            ></video>
+        <div *ngIf="!loading() && breakingNews().length === 0" class="p-3 text-xs text-slate-500">
+          No breaking news items found.
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: details -->
+    <div class="lg:col-span-2 space-y-3">
+      <!-- Enrichment -->
+      <div class="rounded-2xl border border-slate-800 bg-slate-900 p-3">
+        <div class="text-sm font-semibold mb-2">Enrichment</div>
+
+        <div *ngIf="enrichmentLoading()" class="text-xs text-slate-400">Loading enrichment…</div>
+        <div *ngIf="enrichmentError()" class="text-xs text-red-400">{{ enrichmentError() }}</div>
+
+        <div *ngIf="!enrichmentLoading() && enrichment() as e" class="text-xs text-slate-200 space-y-2">
+          <div *ngIf="e.category"><span class="text-slate-400">Category:</span> {{ e.category }}</div>
+          <div *ngIf="e.event_type"><span class="text-slate-400">Event type:</span> {{ e.event_type }}</div>
+          <div *ngIf="e.context"><span class="text-slate-400">Context:</span> {{ e.context }}</div>
+          <div *ngIf="e.credibility != null"><span class="text-slate-400">Credibility:</span> {{ e.credibility }}</div>
+          <div *ngIf="e.confidence != null"><span class="text-slate-400">Confidence:</span> {{ e.confidence }}</div>
+          <div *ngIf="e.risk_score != null"><span class="text-slate-400">Risk score:</span> {{ e.risk_score }}</div>
+
+          <div *ngIf="e.entities?.people?.length">
+            <span class="text-slate-400">People:</span> {{ e.entities?.people?.join(', ') }}
+          </div>
+          <div *ngIf="e.entities?.organizations?.length">
+            <span class="text-slate-400">Organizations:</span> {{ e.entities?.organizations?.join(', ') }}
+          </div>
+          <div *ngIf="e.entities?.equipment?.length">
+            <span class="text-slate-400">Equipment:</span> {{ e.entities?.equipment?.join(', ') }}
           </div>
         </div>
-      </article>
+
+        <div *ngIf="!enrichmentLoading() && !enrichment() && !enrichmentError()" class="text-xs text-slate-500">
+          No enrichment available.
+        </div>
+      </div>
+
+      <!-- Media -->
+      <div class="rounded-2xl border border-slate-800 bg-slate-900 p-3">
+        <div class="text-sm font-semibold mb-2">Media</div>
+
+        <div *ngIf="mediaLoading()" class="text-xs text-slate-400">Loading media…</div>
+        <div *ngIf="mediaError()" class="text-xs text-red-400">{{ mediaError() }}</div>
+
+        <div *ngIf="!mediaLoading() && media() as m">
+          <app-media-embed [links]="m.video_links"></app-media-embed>
+        </div>
+
+        <div *ngIf="!mediaLoading() && !media() && !mediaError()" class="text-xs text-slate-500">
+          No media available.
+        </div>
+      </div>
     </div>
   </div>
+</div>
 
-  <!-- RIGHT COLUMN: ENRICHMENT DETAILS (2/3 width) -->
-  <div class="col-span-2 bg-slate-900/40 rounded-2xl p-4 border border-slate-800">
-    <!-- Loading / error / empty states -->
-    <div *ngIf="enrichmentLoading()" class="text-xs text-slate-400">
-      Loading enrichment details...
-    </div>
-
-    <div *ngIf="!enrichmentLoading() && enrichmentError()" class="text-xs text-red-400">
-      {{ enrichmentError() }}
-    </div>
-
-    <div
-      *ngIf="!enrichmentLoading() && !enrichmentError() && !enrichment()"
-      class="text-xs text-slate-500 h-full flex items-center justify-center text-center"
-    >
-      Select a breaking news item on the left to see detailed analysis.
-    </div>
-
-    <!-- Enrichment content -->
-    <div
-      *ngIf="!enrichmentLoading() && !enrichmentError() && enrichment() as detail"
-      class="space-y-4"
-    >
-      <!-- Header -->
-      <header class="flex items-start justify-between gap-4">
-        <div>
-          <p class="text-[11px] text-slate-400 uppercase tracking-wide">
-            Enriched analysis
-          </p>
-          <h2 class="text-sm font-semibold mt-1">
-            {{ detail.category || 'Uncategorised' }}
-            <span *ngIf="detail.event_type" class="text-[11px] text-slate-400">
-              · {{ detail.event_type }}
-            </span>
-          </h2>
-        </div>
-
-        <div class="text-right text-[11px] text-slate-400 space-y-1">
-          <div *ngIf="detail.risk_score !== undefined">
-            <span class="block text-[10px] uppercase tracking-wide">Risk</span>
-            <span class="text-sm font-semibold">
-              {{ detail.risk_score | number: '1.0-2' }}
-            </span>
-          </div>
-          <div *ngIf="detail.confidence !== undefined">
-            <span class="block text-[10px] uppercase tracking-wide">Confidence</span>
-            <span class="text-sm font-semibold">
-              {{ detail.confidence | number: '1.0-2' }}
-            </span>
-          </div>
-          <div *ngIf="detail.credibility !== undefined">
-            <span class="block text-[10px] uppercase tracking-wide">Credibility</span>
-            <span class="text-sm font-semibold">
-              {{ detail.credibility | number: '1.0-2' }}
-            </span>
-          </div>
-        </div>
-      </header>
-
-      <!-- Context -->
-      <section *ngIf="detail.context">
-        <h3 class="text-[11px] font-semibold text-slate-300 mb-1">
-          Context
-        </h3>
-        <p class="text-xs text-slate-200 leading-relaxed">
-          {{ detail.context }}
+<!-- Live feed modal -->
+<div
+  *ngIf="liveModalOpen()"
+  class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+>
+  <div class="w-full max-w-3xl rounded-2xl border border-slate-700 bg-slate-900 p-4 shadow-xl">
+    <div class="flex items-start justify-between gap-3">
+      <div>
+        <h3 class="text-sm font-semibold">Live feed</h3>
+        <p class="text-xs text-slate-400 mt-1">
+          {{ liveModalMessage() }}
         </p>
-      </section>
+        <p *ngIf="liveJobId()" class="text-[11px] text-slate-500 mt-1">
+          Job: {{ liveJobId() }}
+        </p>
+      </div>
 
-      <!-- Entities -->
-      <section *ngIf="detail.entities">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
-          <div *ngIf="detail.entities.people?.length">
-            <h4 class="text-[11px] font-semibold text-slate-300 mb-1">People</h4>
-            <div class="flex flex-wrap gap-1">
-              <span
-                *ngFor="let person of detail.entities.people"
-                class="px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700"
+      <div class="flex items-center gap-2">
+        <button
+          type="button"
+          class="text-xs px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700"
+          (click)="closeLiveFeedModal()"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <!-- Spinner / loading indicator -->
+      <div
+        *ngIf="liveModalStage() === 'starting' || liveModalStage() === 'running'"
+        class="flex items-center gap-3 text-xs text-slate-200"
+      >
+        <span
+          class="inline-block h-4 w-4 rounded-full border-2 border-slate-500 border-t-transparent animate-spin"
+          aria-hidden="true"
+        ></span>
+        <span>Working…</span>
+      </div>
+
+      <!-- Done -->
+      <div *ngIf="liveModalStage() === 'done'" class="text-xs text-emerald-400 mt-2">
+        Finished. You can keep browsing results below.
+      </div>
+
+      <!-- Error -->
+      <div *ngIf="liveModalStage() === 'failed'" class="text-xs text-red-400 mt-2">
+        {{ liveError() || 'Something went wrong.' }}
+      </div>
+
+      <div *ngIf="liveModalStage() === 'failed'" class="mt-3 flex gap-2">
+        <button
+          type="button"
+          (click)="startLiveFeed()"
+          class="text-xs px-2 py-1 rounded-lg bg-sky-700 hover:bg-sky-600 border border-sky-600"
+        >
+          Retry
+        </button>
+      </div>
+
+      <!-- Live results list -->
+      <div class="mt-4">
+        <div class="text-xs text-slate-400 mb-2">
+          Results ({{ liveItems().length }})
+        </div>
+
+        <div *ngIf="liveItems().length === 0" class="text-xs text-slate-500">
+          No live items yet…
+        </div>
+
+        <div class="max-h-[420px] overflow-auto space-y-3 pr-1" *ngIf="liveItems().length > 0">
+          <div
+            *ngFor="let item of liveItems(); trackBy: trackLiveById"
+            class="rounded-xl border border-slate-700 bg-slate-950 p-3"
+          >
+            <div class="flex items-start justify-between gap-3">
+              <div class="text-xs text-slate-300">
+                <div class="font-semibold">
+                  {{ item.authorName || item.author || 'Unknown author' }}
+                </div>
+                <div class="text-[11px] text-slate-500 mt-0.5">
+                  Tweet: {{ item.tweetId }} · Query: {{ item.query || '—' }}
+                </div>
+              </div>
+
+              <button
+                *ngIf="item.searchUrl"
+                type="button"
+                class="text-[11px] text-sky-400 hover:underline whitespace-nowrap"
+                (click)="openExternal(item.searchUrl)"
               >
-                {{ person }}
-              </span>
+                Open search
+              </button>
             </div>
-          </div>
 
-          <div *ngIf="detail.entities.organizations?.length">
-            <h4 class="text-[11px] font-semibold text-slate-300 mb-1">Organizations</h4>
-            <div class="flex flex-wrap gap-1">
-              <span
-                *ngFor="let org of detail.entities.organizations"
-                class="px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700"
-              >
-                {{ org }}
-              </span>
+            <div class="text-xs text-slate-200 mt-2 whitespace-pre-wrap">
+              {{ item.text || '—' }}
             </div>
-          </div>
 
-          <div *ngIf="detail.entities.equipment?.length">
-            <h4 class="text-[11px] font-semibold text-slate-300 mb-1">Equipment</h4>
-            <div class="flex flex-wrap gap-1">
-              <span
-                *ngFor="let eq of detail.entities.equipment"
-                class="px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700"
+            <div class="mt-2 flex flex-wrap gap-2" *ngIf="item.images?.length">
+              <a
+                *ngFor="let img of item.images"
+                [href]="img"
+                target="_blank"
+                rel="noreferrer"
+                class="block"
               >
-                {{ eq }}
-              </span>
+                <img
+                  [src]="img"
+                  alt="image"
+                  class="h-16 w-16 object-cover rounded-lg border border-slate-700"
+                />
+              </a>
+            </div>
+
+            <div class="mt-2 text-[11px] text-slate-500 flex flex-wrap gap-x-3 gap-y-1">
+              <span *ngIf="item.createdAt">Captured: {{ item.createdAt | date:'medium' }}</span>
+              <span *ngIf="item.source">Source: {{ item.source }}</span>
+              <span *ngIf="item.enrichmentTweetId">Enrichment: {{ item.enrichmentTweetId }}</span>
             </div>
           </div>
         </div>
-      </section>
-
-      <!-- Locations -->
-      <section *ngIf="detail.locations?.length">
-        <h3 class="text-[11px] font-semibold text-slate-300 mb-1">
-          Locations
-        </h3>
-        <ul class="text-xs text-slate-200 space-y-1">
-          <li *ngFor="let loc of detail.locations">
-            • {{ loc.place || 'Unknown location' }}
-            <span *ngIf="loc.country" class="text-slate-400">
-              ({{ loc.country }})
-            </span>
-          </li>
-        </ul>
-      </section>
-
-      <!-- Future scenarios -->
-      <section *ngIf="detail.future_scenarios?.length">
-        <h3 class="text-[11px] font-semibold text-slate-300 mb-1">
-          Future scenarios
-        </h3>
-        <ul class="space-y-1.5 text-xs text-slate-200">
-          <li *ngFor="let fs of detail.future_scenarios">
-            <div class="flex items-center justify-between gap-2">
-              <span>• {{ fs.scenario }}</span>
-              <span class="text-[10px] text-slate-400 whitespace-nowrap">
-                Likelihood: {{ (fs.likelihood || 0) * 100 | number: '1.0-0' }}%
-              </span>
-            </div>
-          </li>
-        </ul>
-      </section>
-
-      <!-- Knock-on effects -->
-      <section *ngIf="detail.knock_on_effects?.length">
-        <h3 class="text-[11px] font-semibold text-slate-300 mb-1">
-          Knock-on effects
-        </h3>
-        <ul class="space-y-1.5 text-xs text-slate-200">
-          <li *ngFor="let k of detail.knock_on_effects">
-            <div class="flex items-center justify-between gap-2">
-              <span>• {{ k.effect }}</span>
-              <span class="text-[10px] text-slate-400 whitespace-nowrap">
-                Likelihood: {{ (k.likelihood || 0) * 100 | number: '1.0-0' }}%
-              </span>
-            </div>
-          </li>
-        </ul>
-      </section>
-
-      <!-- Sources -->
-      <section *ngIf="detail.sources_to_verify?.length || detail.tweet_url">
-        <h3 class="text-[11px] font-semibold text-slate-300 mb-1">
-          Sources / verification
-        </h3>
-        <ul class="text-xs text-slate-200 space-y-1">
-          <li *ngIf="detail.tweet_url">
-            <a
-              [href]="detail.tweet_url"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="underline text-sky-400 hover:text-sky-300"
-            >
-              View original post
-            </a>
-          </li>
-          <li *ngFor="let src of detail.sources_to_verify">
-            <a
-              [href]="src"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="underline text-sky-400 hover:text-sky-300 break-all"
-            >
-              {{ src }}
-            </a>
-          </li>
-        </ul>
-      </section>
-
-      <!-- Meta -->
-      <section class="border-t border-slate-800 pt-3 text-[10px] text-slate-500 flex flex-wrap gap-3">
-        <span *ngIf="detail.time_window">
-          Time window: {{ detail.time_window }}
-        </span>
-        <span *ngIf="detail.tweet_datetime">
-          Tweet: {{ detail.tweet_datetime | date: 'short' }}
-        </span>
-        <span *ngIf="detail.model_used">
-          Model: {{ detail.model_used }}
-        </span>
-        <span *ngIf="detail.needs_higher_model">
-          Needs higher model
-        </span>
-        <span *ngIf="detail.hash">
-          Hash: {{ detail.hash }}
-        </span>
-      </section>
-
-            <!-- Related media (images + links) -->
-      <section class="space-y-2">
-        <!-- Media loading / error states -->
-        <div *ngIf="mediaLoading()" class="text-[11px] text-slate-400">
-          Loading related media...
-        </div>
-
-        <div *ngIf="!mediaLoading() && mediaError()" class="text-[11px] text-red-400">
-          {{ mediaError() }}
-        </div>
-
-        <!-- Actual media content -->
-   <ng-container *ngIf="!mediaLoading() && !mediaError() && media() as m">
-  <!-- Only render if there is at least something -->
-  <div
-    *ngIf="m.images?.length || m.video_links?.length"
-    class="space-y-3 mt-2"
-  >
-    <h3 class="text-[11px] font-semibold text-slate-300">
-      Related media
-    </h3>
-
-    <!-- Images grid -->
-    <div *ngIf="m.images?.length" class="grid grid-cols-2 md:grid-cols-3 gap-2">
-      <!-- ... -->
+      </div>
     </div>
 
-    <!-- Video links (TikTok / YouTube / etc.) -->
-    <div *ngIf="m.video_links?.length" class="space-y-2">
-      <h4 class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
-        Media links
-      </h4>
-
-      <app-media-embed
-        [links]="m.video_links"
-      ></app-media-embed>
-    </div>
-
-    <!-- additional_links block can stay as-is -->
-    <!-- ... -->
-  </div>
-</ng-container>
-
-      </section>
-
-    </div>
   </div>
 </div>

@@ -18,7 +18,9 @@ type MenuItem = {
 export class AdminLayoutComponent {
   menuItems: MenuItem[] = [
     { label: 'Overview', icon: '', link: '/admin/dashboard' },
-    { label: 'Breaking news', icon: '', link: '/admin/breaking-news' }
+    { label: 'Breaking news', icon: '', link: '/admin/breaking-news' },
+    // add more when you have components:
+     { label: 'News Feed', icon: '', link: '/admin/news-feed' }
     // add more when you have components:
     // { label: 'Articles', icon: '📰', link: '/admin/articles' },
     // { label: 'Users', icon: '👥', link: '/admin/users' },

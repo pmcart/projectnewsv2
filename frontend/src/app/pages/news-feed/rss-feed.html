@@ -1,0 +1,266 @@
+<div class="grid grid-cols-3 gap-4">
+  <!-- LEFT -->
+  <div class="col-span-1 space-y-4">
+    <div class="flex items-center justify-between mb-2">
+      <h2 class="text-sm font-semibold">Google News RSS</h2>
+
+      <button
+        type="button"
+        (click)="loadFeed()"
+        class="text-xs px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700"
+      >
+        Refresh
+      </button>
+    </div>
+
+    <!-- Filters -->
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" class="space-y-2 text-[11px]">
+      <div class="grid grid-cols-2 gap-2">
+        <div>
+          <label class="block mb-1 text-slate-400">Country</label>
+          <select
+            class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs"
+            formControlName="country"
+          >
+            <option value="US">US</option>
+            <option value="GB">UK</option>
+            <option value="IE">Ireland</option>
+            <option value="DE">Germany</option>
+            <option value="FR">France</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block mb-1 text-slate-400">
+            Category <span class="text-slate-500">(ignored if topic set)</span>
+          </label>
+          <select
+            class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs"
+            formControlName="category"
+          >
+            <option [ngValue]="null">Top stories</option>
+            <option value="world">World</option>
+            <option value="nation">Nation</option>
+            <option value="business">Business</option>
+            <option value="technology">Technology</option>
+            <option value="entertainment">Entertainment</option>
+            <option value="science">Science</option>
+            <option value="sports">Sports</option>
+            <option value="health">Health</option>
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label class="block mb-1 text-slate-400">Topic (search)</label>
+        <div class="flex gap-2">
+          <input
+            type="text"
+            class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs"
+            placeholder="e.g. Ukraine, Bitcoin, AI..."
+            formControlName="topic"
+          />
+          <button
+            *ngIf="form.value.topic"
+            type="button"
+            (click)="clearTopic()"
+            class="text-[11px] px-2 rounded-lg bg-slate-800 border border-slate-700 hover:bg-slate-700"
+          >
+            Clear
+          </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2 items-end">
+        <div class="flex items-center gap-2">
+          <label class="text-slate-400">Limit</label>
+          <input
+            type="number"
+            min="1"
+            max="100"
+            class="w-20 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs"
+            formControlName="limit"
+          />
+        </div>
+
+        <!-- NEW: enrich -->
+        <!-- <div>
+          <label class="block mb-1 text-slate-400">Enrichment</label>
+          <select
+            class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs"
+            formControlName="enrich"
+          >
+            <option value="none">None (fast)</option>
+            <option value="light">Light (OG + JSON-LD)</option>
+            <option value="full">Full (heavier)</option>
+          </select>
+        </div> -->
+      </div>
+
+      <div class="flex justify-end">
+        <button
+          type="submit"
+          class="text-xs px-3 py-1 rounded-lg bg-sky-600 hover:bg-sky-500"
+        >
+          Apply
+        </button>
+      </div>
+    </form>
+
+    <!-- states -->
+    <div *ngIf="loading()" class="text-xs text-slate-400 mt-2">Loading RSS feed...</div>
+    <div *ngIf="!loading() && error()" class="text-xs text-red-400 mt-2">{{ error() }}</div>
+
+    <div *ngIf="!loading() && !error() && items().length === 0" class="text-xs text-slate-400 mt-2">
+      No items found for current filters.
+    </div>
+
+    <!-- list -->
+    <div *ngIf="!loading() && !error() && items().length > 0" class="space-y-3 mt-2">
+      <article
+        *ngFor="let item of items(); trackBy: trackByItem"
+        (click)="selectItem(item)"
+        class="bg-slate-900/80 border border-slate-800 rounded-2xl p-3 cursor-pointer hover:border-sky-500 transition-colors"
+      >
+        <header class="flex items-start justify-between gap-3 mb-1">
+          <div class="min-w-0">
+            <h3 class="text-xs font-semibold line-clamp-2">
+              {{ item.title || 'Untitled article' }}
+            </h3>
+
+            <div class="flex items-center gap-2 text-[11px] text-slate-400">
+              <img
+                *ngIf="item.favicon"
+                [src]="item.favicon"
+                alt=""
+                class="w-4 h-4 rounded"
+                loading="lazy"
+                referrerpolicy="no-referrer"
+              />
+              <span class="truncate">
+                {{ item.siteName || item.sourceName || getDisplayDomain(item) || 'Unknown source' }}
+              </span>
+            </div>
+          </div>
+
+          <span class="text-[10px] text-slate-500 whitespace-nowrap">
+            {{ getBestDate(item) | date: 'short' }}
+          </span>
+        </header>
+
+        <p *ngIf="item.description" class="text-[11px] text-slate-300 line-clamp-3">
+          {{ item.description }}
+        </p>
+
+        <div *ngIf="item.section" class="mt-2 text-[10px] text-slate-500">
+          Section: <span class="text-slate-300">{{ item.section }}</span>
+        </div>
+      </article>
+    </div>
+  </div>
+
+  <!-- RIGHT -->
+  <div class="col-span-2 bg-slate-900/40 rounded-2xl p-4 border border-slate-800">
+    <div
+      *ngIf="!selectedItem() && !loading() && !error()"
+      class="text-xs text-slate-500 h-full flex items-center justify-center text-center"
+    >
+      Select a headline on the left to see full details.
+    </div>
+
+    <ng-container *ngIf="selectedItem() as current">
+      <div class="flex items-start justify-between gap-4">
+        <div class="min-w-0">
+          <h2 class="text-lg font-semibold">{{ current.title }}</h2>
+
+          <div class="mt-1 flex items-center gap-2 text-xs text-slate-400">
+            <img
+              *ngIf="current.favicon"
+              [src]="current.favicon"
+              alt=""
+              class="w-4 h-4 rounded"
+              loading="lazy"
+              referrerpolicy="no-referrer"
+            />
+            <span class="truncate">
+              {{ current.siteName || current.sourceName || getDisplayDomain(current) || 'Unknown source' }}
+            </span>
+            <span class="text-slate-600">•</span>
+            <span>{{ getBestDate(current) | date: 'medium' }}</span>
+          </div>
+
+          <div class="mt-2 flex flex-wrap gap-2 text-[11px]">
+            <a
+              *ngIf="getBestLink(current)"
+              [href]="getBestLink(current)!"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="underline text-sky-400 hover:text-sky-300"
+            >
+              Open article
+            </a>
+
+            <a
+              *ngIf="current.resolvedLink && current.resolvedLink !== getBestLink(current)"
+              [href]="current.resolvedLink"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="underline text-slate-400 hover:text-slate-200"
+            >
+              Resolved
+            </a>
+
+            <a
+              *ngIf="current.link && current.link !== getBestLink(current)"
+              [href]="current.link"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="underline text-slate-500 hover:text-slate-300"
+            >
+              Google link
+            </a>
+          </div>
+        </div>
+
+        <img
+          *ngIf="current.imageURL"
+          [src]="current.imageURL"
+          alt=""
+          class="w-40 h-24 object-cover rounded-xl border border-slate-800"
+          loading="lazy"
+          referrerpolicy="no-referrer"
+        />
+      </div>
+
+      <p *ngIf="current.description" class="mt-4 text-sm text-slate-200">
+        {{ current.description }}
+      </p>
+
+      <div class="mt-4 space-y-2 text-xs text-slate-300">
+        <div *ngIf="current.authors?.length">
+          <span class="text-slate-500">Authors:</span>
+          <!-- {{ current.authors.join(', ') }} -->
+        </div>
+
+        <div *ngIf="current.section">
+          <span class="text-slate-500">Section:</span>
+          {{ current.section }}
+        </div>
+
+        <div *ngIf="current.keywords?.length" class="flex flex-wrap gap-2">
+          <span class="text-slate-500 w-full">Keywords:</span>
+          <span
+            *ngFor="let k of current.keywords"
+            class="text-[11px] px-2 py-1 rounded-full bg-slate-800 border border-slate-700"
+          >
+            {{ k }}
+          </span>
+        </div>
+
+        <div *ngIf="current.canonicalLink" class="break-all text-slate-500">
+          Canonical: {{ current.canonicalLink }}
+        </div>
+      </div>
+    </ng-container>
+  </div>
+</div>

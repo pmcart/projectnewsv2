@@ -104,6 +104,7 @@ type InputItem = MediaLink | string | BackendVideo;
   `
 })
 export class MediaEmbedComponent {
+  
   embedItems: EmbedItem[] = [];
 
   // Accept:
