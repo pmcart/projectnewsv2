@@ -5,6 +5,11 @@
     <h2 class="text-sm font-semibold">Breaking news</h2>
 
     <div class="flex items-center gap-2">
+      <app-new-content-button
+        [itemId]="selectedId()"
+        [itemType]="'breaking-news'">
+      </app-new-content-button>
+
       <button
         type="button"
         (click)="openLiveFeedModal(); startLiveFeed()"

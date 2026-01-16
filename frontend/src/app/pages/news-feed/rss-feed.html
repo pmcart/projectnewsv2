@@ -4,13 +4,20 @@
     <div class="flex items-center justify-between mb-2">
       <h2 class="text-sm font-semibold">Google News RSS</h2>
 
-      <button
-        type="button"
-        (click)="loadFeed()"
-        class="text-xs px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700"
-      >
-        Refresh
-      </button>
+      <div class="flex items-center gap-2">
+        <app-new-content-button
+          [itemId]="selectedItem()?.guid || null"
+          [itemType]="'rss-feed'">
+        </app-new-content-button>
+
+        <button
+          type="button"
+          (click)="loadFeed()"
+          class="text-xs px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700"
+        >
+          Refresh
+        </button>
+      </div>
     </div>
 
     <!-- Filters -->

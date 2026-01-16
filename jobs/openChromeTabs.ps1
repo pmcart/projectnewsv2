@@ -1,16 +1,5 @@
-# List of usernames to open on X.com
-$usernames = @(
-    "Osinttechnical",
-    "bellingcat",
-    "sentdefender",
-    "WarMonitors",
-    "PolymarketIntel",
-    "Faytuks",
-    "spectatorindex"
-)
-
-# Build full URLs
-$urls = $usernames | ForEach-Object { "https://x.com/$_" }
+# URL for your X (Twitter) home timeline
+$url = "https://x.com/home"
 
 # Find Chrome
 $chromePaths = @(
@@ -28,9 +17,11 @@ if (-not $chrome) {
 # DevTools remote-debugging port (for Puppeteer/Playwright)
 $debugPort = 9222
 
-# IMPORTANT: no --user-data-dir here, so Chrome uses your existing profile
+# Launch Chrome with your existing logged-in session
 $arguments = @(
-    "--remote-debugging-port=$debugPort --user-data-dir=`"C:\ChromeDebug`""
-) + $urls
+    "--remote-debugging-port=$debugPort",
+    "--user-data-dir=`"C:\ChromeDebug`"",
+    $url
+)
 
 Start-Process $chrome -ArgumentList $arguments

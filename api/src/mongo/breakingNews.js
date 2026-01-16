@@ -15,7 +15,7 @@ class BreakingNewsRepo {
   }
 
   async getById(id) {
-    return BreakingNews.findById(id).lean().exec();
+    return BreakingNews.findOne({ tweetId: id }).lean().exec();
   }
 
   async getEnrichmentById(id) {

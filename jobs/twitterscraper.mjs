@@ -1,4 +1,4 @@
-// twitter-scraper.mjs
+// twitter-home-scraper.mjs
 import { chromium } from 'playwright';
 import { MongoClient } from 'mongodb';
 
@@ -6,50 +6,75 @@ const CDP_ENDPOINT = process.env.CDP || 'http://127.0.0.1:9222';
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017';
 const DB_NAME = 'global';
 const COLL_NAME = 'breaking_news';
-const BETWEEN_TABS_MS = 10_000; // 1 minute between tabs
+
+const HOME_URL = 'https://x.com/home';
+const TAKE_LATEST = 20;
 
 // ---------- small utils ----------
-const sleep = (ms) => new Promise(res => setTimeout(res, ms));
+const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
 
-function isX(urlStr) {
+function isHomeLatestTimelineUrl(urlStr) {
   try {
     const u = new URL(urlStr);
-    return u.hostname === 'x.com' || u.hostname.endsWith('.x.com');
-  } catch { return false; }
-}
-
-// Match: https://x.com/i/api/graphql/<hash>/UserTweets
-function isUserTweetsUrl(urlStr) {
-  try {
-    const u = new URL(urlStr);
-    if (!(u.hostname === 'x.com' || u.hostname.endsWith('.x.com'))) return false;
+    if (u.hostname !== 'x.com' && !u.hostname.endsWith('.x.com')) return false;
     const parts = u.pathname.split('/').filter(Boolean);
-    return parts.length >= 5 && parts[0] === 'i' && parts[1] === 'api' &&
-           parts[2] === 'graphql' && parts[4] === 'UserTweets';
-  } catch { return false; }
+    // /i/api/graphql/<hash>/HomeLatestTimeline
+    return (
+      parts.length >= 5 &&
+      parts[0] === 'i' &&
+      parts[1] === 'api' &&
+      parts[2] === 'graphql' &&
+      parts[4] === 'HomeLatestTimeline'
+    );
+  } catch {
+    return false;
+  }
 }
 
 async function waitForXMain(page) {
-  const candidates = ['main[role="main"]', 'div[data-testid="primaryColumn"]', 'section[aria-label]'];
+  const candidates = ['main[role="main"]', 'div[data-testid="primaryColumn"]'];
   for (const sel of candidates) {
-    try { await page.waitForSelector(sel, { timeout: 6000 }); return; } catch {}
+    try {
+      await page.waitForSelector(sel, { timeout: 8000 });
+      return;
+    } catch {}
   }
   await page.waitForTimeout(1500);
 }
 
-async function refreshViaReload(page) {
-  await page.reload({ waitUntil: 'domcontentloaded' });
+async function ensureHomePage(browser) {
+  const contexts = browser.contexts();
+  const pages = contexts.flatMap((c) => c.pages());
+
+  const existing = pages.find((p) => {
+    try {
+      const u = new URL(p.url());
+      return (u.hostname === 'x.com' || u.hostname.endsWith('.x.com')) && u.pathname === '/home';
+    } catch {
+      return false;
+    }
+  });
+
+  if (existing && !existing.isClosed()) {
+    await waitForXMain(existing);
+    return existing;
+  }
+
+  const ctx = contexts[0] || (await browser.newContext());
+  const page = await ctx.newPage();
+  await page.goto(HOME_URL, { waitUntil: 'domcontentloaded' });
   await waitForXMain(page);
+  return page;
 }
 
-// Capture responses matching UserTweets during an action; return parsed JSON payloads
-async function captureUserTweetsJSON(page, actionFn, { tailMs = 2500 } = {}) {
+async function captureHomeLatestJSON(page, actionFn, { tailMs = 2500 } = {}) {
   const responses = [];
+
   const onResponse = (resp) => {
     try {
-      const method = resp.request().method();
+      const req = resp.request();
       const url = resp.url();
-      if ((method === 'GET' || method === 'POST') && isUserTweetsUrl(url)) {
+      if (req.method() === 'POST' && isHomeLatestTimelineUrl(url)) {
         responses.push(resp);
       }
     } catch {}
@@ -60,7 +85,7 @@ async function captureUserTweetsJSON(page, actionFn, { tailMs = 2500 } = {}) {
     await actionFn();
     await page.waitForTimeout(tailMs);
   } finally {
-    page.removeListener('response', onResponse); // ensure no lingering listener
+    page.removeListener('response', onResponse);
   }
 
   const payloads = [];
@@ -73,7 +98,7 @@ async function captureUserTweetsJSON(page, actionFn, { tailMs = 2500 } = {}) {
   return payloads;
 }
 
-// ---------- extraction ----------
+// ---------- extraction helpers ----------
 function expandUrlsInText(text, entities) {
   if (!text || !entities || !Array.isArray(entities.urls)) return text;
   let out = text;
@@ -82,33 +107,49 @@ function expandUrlsInText(text, entities) {
   }
   return out;
 }
+
 function pickVideoVariants(media) {
   if (!media?.video_info?.variants) return [];
-  const mp4s = media.video_info.variants
-    .filter(v => v.content_type === 'video/mp4' && v.url)
-    .map(v => ({ url: v.url, bitrate: v.bitrate ?? 0 }));
-  mp4s.sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0));
-  return mp4s;
+  return media.video_info.variants
+    .filter((v) => v.content_type === 'video/mp4' && v.url)
+    .map((v) => ({ url: v.url, bitrate: v.bitrate ?? 0 }))
+    .sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0));
 }
-function extractTweetsFromUserTweets(json) {
+
+function unwrapTweetResult(tweetResult) {
+  if (!tweetResult) return null;
+  if (tweetResult.__typename === 'Tweet') return tweetResult;
+  if (tweetResult.__typename === 'TweetWithVisibilityResults') return tweetResult.tweet || null;
+  return null;
+}
+
+/**
+ * Extract tweets from HomeLatestTimeline response.
+ * Also captures entry sortIndex so we can select "latest" reliably.
+ */
+function extractTweetsFromHomeLatest(json) {
   const out = [];
-  const instructions = json?.data?.user?.result?.timeline?.timeline?.instructions || [];
+  const instructions = json?.data?.home?.home_timeline_urt?.instructions || [];
   const entries = [];
+
   for (const instr of instructions) {
-    if (instr.type === 'TimelineAddEntries' && Array.isArray(instr.entries)) {
+    if (instr?.type === 'TimelineAddEntries' && Array.isArray(instr.entries)) {
       entries.push(...instr.entries);
-    } else if (instr.type === 'TimelinePinEntry' && instr.entry) {
+    } else if (instr?.type === 'TimelinePinEntry' && instr.entry) {
       entries.push(instr.entry);
     }
   }
+
   for (const entry of entries) {
     const item = entry?.content?.itemContent;
     if (!item || item.itemType !== 'TimelineTweet') continue;
-    const tweet = item.tweet_results?.result;
+
+    const tweet = unwrapTweetResult(item?.tweet_results?.result);
     if (!tweet || tweet.__typename !== 'Tweet') continue;
 
     const legacy = tweet.legacy || {};
     const coreUser = tweet.core?.user_results?.result;
+
     const author_screen_name = coreUser?.core?.screen_name;
     const author_name = coreUser?.core?.name;
     const author_id = coreUser?.rest_id;
@@ -120,47 +161,45 @@ function extractTweetsFromUserTweets(json) {
     const media = legacy.extended_entities?.media || legacy.entities?.media || [];
     const images = [];
     const videos = [];
+
     for (const m of media) {
       if (m.type === 'photo' && m.media_url_https) {
         images.push(m.media_url_https);
       } else if (m.type === 'video' || m.type === 'animated_gif') {
         const variants = pickVideoVariants(m);
         if (variants.length) {
-          videos.push({
-            best: variants[0].url,
-            variants
-          });
+          videos.push({ best: variants[0].url, variants });
         }
       }
     }
 
     const id = legacy.id_str || tweet.rest_id;
     const created_at = legacy.created_at ? new Date(legacy.created_at).toISOString() : null;
-    const url = (author_screen_name && id) ? `https://x.com/${author_screen_name}/status/${id}` : null;
+    const url =
+      author_screen_name && id ? `https://x.com/${author_screen_name}/status/${id}` : null;
 
     out.push({
       id,
       url,
-      author: {
-        id: author_id,
-        screen_name: author_screen_name,
-        name: author_name
-      },
+      sortIndex: entry?.sortIndex || null,
+      author: { id: author_id, screen_name: author_screen_name, name: author_name },
       created_at,
       text,
       images,
-      videos
+      videos,
     });
   }
+
   return out;
 }
 
 // ---------- mapping to Mongo ----------
 function toMongoTweetDoc(extracted) {
-  const bestVideoUrls = extracted.videos?.map(v => v.best).filter(Boolean) || [];
+  const bestVideoUrls = extracted.videos?.map((v) => v.best).filter(Boolean) || [];
   return {
     url: extracted.url || null,
     account: extracted.author?.screen_name || null,
+    authorId: extracted.author?.id || null, // suggested addition
     datetime: extracted.created_at ? new Date(extracted.created_at) : null,
     images: extracted.images || [],
     lastSeenAt: new Date(),
@@ -169,16 +208,45 @@ function toMongoTweetDoc(extracted) {
     videos: bestVideoUrls,
     enriched: false,
     enrichedAt: null,
-    enrichmentRef: null
+    enrichmentRef: null,
   };
+}
+
+// ---------- pick latest 20 ----------
+function pickLatestN(tweets, n = 20) {
+  // De-dupe within run
+  const byId = new Map();
+  for (const t of tweets) if (t?.id) byId.set(t.id, t);
+  const uniq = [...byId.values()];
+
+  // Prefer sortIndex (string number). Bigger = newer.
+  const haveSort = uniq.some((t) => t.sortIndex && /^\d+$/.test(String(t.sortIndex)));
+
+  if (haveSort) {
+    uniq.sort((a, b) => {
+      const ai = BigInt(a.sortIndex || '0');
+      const bi = BigInt(b.sortIndex || '0');
+      return bi > ai ? 1 : bi < ai ? -1 : 0;
+    });
+    return uniq.slice(0, n);
+  }
+
+  // Fallback: created_at
+  uniq.sort((a, b) => {
+    const at = a.created_at ? Date.parse(a.created_at) : 0;
+    const bt = b.created_at ? Date.parse(b.created_at) : 0;
+    return bt - at;
+  });
+  return uniq.slice(0, n);
 }
 
 // ---------- main ----------
 (async () => {
   let browser;
   let mongo;
+
   try {
-    // Preflight CDP
+    // CDP preflight
     try {
       const res = await (await fetch(`${CDP_ENDPOINT}/json/version`)).json();
       if (!res.webSocketDebuggerUrl) throw new Error('No webSocketDebuggerUrl from /json/version');
@@ -186,90 +254,93 @@ function toMongoTweetDoc(extracted) {
       throw new Error(`CDP preflight failed at ${CDP_ENDPOINT}: ${e?.message || e}`);
     }
 
-    // Connect to Chrome & Mongo
     browser = await chromium.connectOverCDP(CDP_ENDPOINT);
+
     mongo = new MongoClient(MONGO_URI, { serverSelectionTimeoutMS: 5000 });
     await mongo.connect();
     const coll = mongo.db(DB_NAME).collection(COLL_NAME);
 
-    // Gather X tabs
-    const contexts = browser.contexts();
-    const allPages = contexts.flatMap(c => c.pages());
-    const xPages = allPages.filter(p => isX(p.url()));
+    // ---- indexes (suggested additions) ----
+    await coll.createIndex({ tweetId: 1 }, { unique: true }); // dedupe guarantee
+    await coll.createIndex({ datetime: -1 });
+    await coll.createIndex({ lastSeenAt: -1 });
+    await coll.createIndex({ account: 1, datetime: -1 }); // useful for per-account timelines
 
-    console.log(`Found ${xPages.length} x.com tab(s).`);
-    if (xPages.length === 0) {
-      console.log('Open some profile tabs on x.com, then re-run.');
-      return;
-    }
+    const page = await ensureHomePage(browser);
+    console.log(`Using page: ${page.url()}`);
 
-    // Process each tab sequentially with a 1-minute wait between tabs
+    // Capture HomeLatestTimeline triggered by reload
+    const payloads = await captureHomeLatestJSON(
+      page,
+      async () => {
+        await page.reload({ waitUntil: 'domcontentloaded' });
+        await waitForXMain(page);
+        // small settle so the timeline request actually fires
+        await sleep(750);
+      },
+      { tailMs: 3000 }
+    );
+
+    console.log(`Captured ${payloads.length} HomeLatestTimeline payload(s).`);
+
+    const extractedAll = payloads.flatMap(extractTweetsFromHomeLatest);
+    const extracted = pickLatestN(extractedAll, TAKE_LATEST);
+
+    console.log(`Selected latest ${extracted.length} tweet(s) for storage.`);
+
     const now = new Date();
-    for (const [i, page] of xPages.entries()) {
-      if (page.isClosed()) {
-        console.warn(`Tab ${i + 1} is already closed, skipping.`);
-        continue;
-      }
-      const title = await page.title().catch(() => '(no title)');
-      console.log(`\n[Tab ${i + 1}/${xPages.length}] ${title} -> ${page.url()}`);
 
-      // Capture payload(s) for this tab
-      const payloads = await captureUserTweetsJSON(page, () => refreshViaReload(page), { tailMs: 2500 });
-      console.log(`Captured ${payloads.length} UserTweets payload(s) from this tab.`);
-
-      // Immediately drop any per-page listeners (done inside capture), do not retain page refs.
-
-      // Extract tweets
-      const extractedTweets = payloads.flatMap(extractTweetsFromUserTweets);
-
-      // Upsert into Mongo (by tweetId)
-      let upserts = 0;
-      for (const t of extractedTweets) {
-        const doc = toMongoTweetDoc(t);
-        if (!doc.tweetId) continue;
-
-        await coll.updateOne(
-          { tweetId: doc.tweetId },
-          {
+    const ops = extracted
+      .map((t) => toMongoTweetDoc(t))
+      .filter((doc) => doc.tweetId)
+      .map((doc) => ({
+        updateOne: {
+          filter: { tweetId: doc.tweetId },
+          update: {
             $setOnInsert: {
               fetchedAt: now,
-              tiktoks_processed: doc.tiktoks_processed,
-              tiktoks_count: doc.tiktoks_count,
-              tiktoks_processedAt: doc.tiktoks_processedAt,
               enriched: doc.enriched,
               enrichedAt: doc.enrichedAt,
-              enrichmentRef: doc.enrichmentRef
+              enrichmentRef: doc.enrichmentRef,
             },
+            // Always update lastSeenAt; update content fields too
             $set: {
               url: doc.url,
               account: doc.account,
+              authorId: doc.authorId,
               datetime: doc.datetime,
               images: doc.images,
               lastSeenAt: new Date(),
               text: doc.text,
-              tweetId: doc.tweetId,
-              videos: doc.videos
-            }
+              videos: doc.videos,
+            },
           },
-          { upsert: true }
-        );
-        upserts++;
-      }
-      console.log(`Upserted/updated ${upserts} tweet(s) into ${DB_NAME}.${COLL_NAME}.`);
+          upsert: true,
+        },
+      }));
 
-      // Wait 1 minute before the next tab (unless this was the last)
-      if (i < xPages.length - 1) {
-        console.log(`Waiting ${Math.round(BETWEEN_TABS_MS / 1000)}s before processing the next tab...`);
-        await sleep(BETWEEN_TABS_MS);
-      }
+    if (!ops.length) {
+      console.log('No docs to upsert.');
+      return;
     }
 
+    const r = await coll.bulkWrite(ops, { ordered: false });
+    console.log(
+      `Mongo: upserted=${r.upsertedCount}, modified=${r.modifiedCount}, matched=${r.matchedCount}`
+    );
   } catch (err) {
     console.error(`Error: ${err?.message || err}`);
     process.exitCode = 1;
   } finally {
-    // Fail-safe disconnects (no lingering connections)
-    if (browser) { try { await browser.close(); } catch {} }
-    if (mongo) { try { await mongo.close(); } catch {} }
+    if (browser) {
+      try {
+        await browser.close();
+      } catch {}
+    }
+    if (mongo) {
+      try {
+        await mongo.close();
+      } catch {}
+    }
   }
 })();

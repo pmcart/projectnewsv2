@@ -94,4 +94,30 @@ export class RssFeedService {
       params
     });
   }
+
+  getItemById(options: {
+    id: string;
+    country?: string;
+    region?: string;
+    category?: string | null;
+    topic?: string | null;
+    enrich?: 'none' | 'light' | 'full';
+  }): Observable<GoogleNewsItem> {
+    let params = new HttpParams();
+
+    if (options.country) params = params.set('country', options.country);
+    else if (options.region) params = params.set('region', options.region);
+
+    if (options.category) params = params.set('category', options.category);
+    if (options.topic) params = params.set('topic', options.topic);
+
+    if (options.enrich) {
+      params = params.set('enrich', options.enrich);
+    }
+
+    return this.http.get<GoogleNewsItem>(`${this.baseUrl}/item/${options.id}`, {
+      headers: this.getHeaders(),
+      params
+    });
+  }
 }

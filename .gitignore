@@ -105,3 +105,13 @@ jobs/.env.*
 frontend/.env
 frontend/.env.*
 passwords,json
+AUTHENTICATION_COMPLETE.md
+ORGANIZATIONS_UPDATE.md
+api/AUTH_SETUP.md
+.claude/settings.json
+.claude/settings.local.json
+api/check-postgres.js
+api/create-database.js
+api/test-current-env.js
+api/test-db-connection.js
+api/prisma/schema.prisma

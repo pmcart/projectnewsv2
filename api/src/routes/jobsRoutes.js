@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const apiKeyAuth = require('../middleware/auth');
+const { apiKeyAuth } = require('../middleware/auth');
 const controller = require('../controllers/jobsController');
 
 router.use(apiKeyAuth);

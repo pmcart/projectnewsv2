@@ -18,6 +18,7 @@ app.get('/health', (req, res) => {
 });
 
 // API routes
+app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/breaking-news', breakingNewsRoutes);
 app.use('/api/rss', require('./routes/rssFeedRoutes'));
 app.use('/api/jobs', require('./routes/jobsRoutes'));

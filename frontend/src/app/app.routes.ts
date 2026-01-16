@@ -3,6 +3,8 @@ import { LoginComponent } from './pages/login/login';
 import { AdminLayoutComponent } from './pages/admin-layout/admin-layout';
 import { BreakingNewsComponent } from './pages/breaking-news/breaking-news';
 import { RssFeedComponent } from './pages/news-feed/rss-feed';
+import { NewContentComponent } from './pages/new-content/new-content';
+import { authGuard } from './guards/auth.guard';
 
 export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'login' },
@@ -11,6 +13,7 @@ export const routes: Routes = [
   {
     path: 'admin',
     component: AdminLayoutComponent,
+    canActivate: [authGuard],
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
 
@@ -36,6 +39,14 @@ export const routes: Routes = [
         data: {
           title: 'News feeds',
           subtitle: 'Browse News feeds by country, category, or topic.'
+        }
+      },
+      {
+        path: 'new-content',
+        component: NewContentComponent,
+        data: {
+          title: 'New Content',
+          subtitle: 'Create new content from selected items.'
         }
       }
 

@@ -26,16 +26,24 @@
       </button>
     </nav>
 
-    <div class="px-4 py-3 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
-      <span>Logged in as <strong class="text-slate-200">admin@example.com</strong></span>
-      <button
-        type="button"
-        (click)="logout()
-        "
-        class="text-slate-400 hover:text-red-400 hover:underline"
-      >
-        Logout
-      </button>
+    <div class="px-4 py-3 border-t border-slate-800">
+      <div class="flex items-center justify-between text-xs text-slate-400 mb-1">
+        <span>Logged in as <strong class="text-slate-200">{{ currentUser?.email || 'Loading...' }}</strong></span>
+        <button
+          type="button"
+          (click)="logout()"
+          class="text-slate-400 hover:text-red-400 hover:underline"
+        >
+          Logout
+        </button>
+      </div>
+      <div class="text-[10px] text-slate-500" *ngIf="currentUser">
+        {{ currentUser.firstName }} {{ currentUser.lastName }}
+        <span class="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 ml-1">{{ currentUser.role }}</span>
+      </div>
+      <div class="text-[10px] text-slate-600 mt-0.5" *ngIf="currentUser?.organization">
+        🏢 {{ currentUser?.organization?.name }}
+      </div>
     </div>
   </aside>
 
@@ -61,13 +69,13 @@
           <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
           Live
         </button>
-        <button
+        <!-- <button
           type="button"
           class="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium
                  bg-blue-600 hover:bg-blue-700"
         >
           + New article
-        </button>
+        </button> -->
       </div>
     </header>
 

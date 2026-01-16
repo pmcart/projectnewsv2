@@ -1,7 +1,7 @@
 // src/routes/breakingNewsRoutes.js
 const express = require('express');
 const router = express.Router();
-const apiKeyAuth = require('../middleware/auth');
+const { apiKeyAuth } = require('../middleware/auth');
 const controller = require('../controllers/breakingNewsController');
 
 // Apply API key auth to all routes in this router

@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router, ActivatedRoute, NavigationEnd } from '@angular/router';
 import { filter, map } from 'rxjs/operators';
+import { AuthService, User } from '../../services/auth.service';
 
 type MenuItem = {
   label: string;
@@ -29,8 +30,14 @@ export class AdminLayoutComponent {
 
   currentTitle = 'Overview';
   currentSubtitle = 'High-level summary and quick actions.';
+  currentUser: User | null = null;
 
-  constructor(private router: Router, private route: ActivatedRoute) {
+  constructor(
+    private router: Router,
+    private route: ActivatedRoute,
+    private authService: AuthService
+  ) {
+    this.currentUser = this.authService.getCurrentUser();
     this.router.events
       .pipe(
         filter((e): e is NavigationEnd => e instanceof NavigationEnd),
@@ -51,6 +58,6 @@ export class AdminLayoutComponent {
   }
 
   logout() {
-    this.router.navigate(['/login']);
+    this.authService.logout();
   }
 }

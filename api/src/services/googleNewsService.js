@@ -545,7 +545,28 @@ async function fetchNews({ region, category, topic, enrich = 'light' }) {
   };
 }
 
+/**
+ * Find a specific news item by guid or normalizedLink
+ * Searches across the specified feed
+ */
+async function findItemById({ id, region, category, topic, enrich = 'light' }) {
+  const { items } = await fetchNews({ region, category, topic, enrich });
+
+  // Try to find by guid first, then by normalizedLink, then by link
+  const item = items.find(
+    (item) =>
+      item.guid === id ||
+      item.normalizedLink === id ||
+      item.link === id ||
+      item.canonicalLink === id ||
+      item.resolvedLink === id
+  );
+
+  return item || null;
+}
+
 module.exports = {
   fetchNews,
+  findItemById,
   buildGoogleNewsRssUrl,
 };
