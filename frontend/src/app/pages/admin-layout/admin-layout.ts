@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterModule, Router, ActivatedRoute, NavigationEnd } from '@angular/router';
 import { filter, map } from 'rxjs/operators';
 import { AuthService, User } from '../../services/auth.service';
+import { LucideAngularModule, TrendingUp, Bell, Newspaper, ClipboardCheck, Building2, Tv } from 'lucide-angular';
 
 type MenuItem = {
   label: string;
@@ -13,19 +14,27 @@ type MenuItem = {
 @Component({
   selector: 'app-admin-layout',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, LucideAngularModule],
   templateUrl: './admin-layout.html'
 })
 export class AdminLayoutComponent {
+  readonly TrendingUp = TrendingUp;
+  readonly Bell = Bell;
+  readonly Newspaper = Newspaper;
+  readonly ClipboardCheck = ClipboardCheck;
+  readonly Building2 = Building2;
+  readonly Tv = Tv;
+
   menuItems: MenuItem[] = [
-    { label: 'Overview', icon: '', link: '/admin/dashboard' },
-    { label: 'Breaking news', icon: '', link: '/admin/breaking-news' },
+    { label: 'Overview', icon: 'trending-up', link: '/admin/dashboard' },
+    { label: 'Breaking news', icon: 'bell', link: '/admin/breaking-news' },
+    { label: 'News Feed', icon: 'newspaper', link: '/admin/news-feed' },
+    { label: 'Live Streams', icon: 'tv', link: '/admin/live-streams' },
+    { label: 'Content Review', icon: 'clipboard-check', link: '/admin/content-review' }
     // add more when you have components:
-     { label: 'News Feed', icon: '', link: '/admin/news-feed' }
-    // add more when you have components:
-    // { label: 'Articles', icon: '📰', link: '/admin/articles' },
-    // { label: 'Users', icon: '👥', link: '/admin/users' },
-    // { label: 'Settings', icon: '⚙️', link: '/admin/settings' }
+    // { label: 'Articles', icon: 'file-lines', link: '/admin/articles' },
+    // { label: 'Users', icon: 'users', link: '/admin/users' },
+    // { label: 'Settings', icon: 'settings', link: '/admin/settings' }
   ];
 
   currentTitle = 'Overview';

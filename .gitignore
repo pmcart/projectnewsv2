@@ -115,3 +115,6 @@ api/create-database.js
 api/test-current-env.js
 api/test-db-connection.js
 api/prisma/schema.prisma
+CONTENT_GENERATION_FEATURE.md
+designdoc.txt
+api/prisma/migrations/migration_lock.toml

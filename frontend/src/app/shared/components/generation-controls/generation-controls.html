@@ -1,0 +1,236 @@
+<div class="generation-controls h-full overflow-y-auto bg-slate-900/40 p-4">
+  <h2 class="text-lg font-semibold text-white mb-4">Generation Controls</h2>
+
+  <div class="space-y-6">
+    <!-- Mode Selection -->
+    <div class="control-group">
+      <label class="block text-sm font-medium text-slate-300 mb-2">Mode</label>
+      <select
+        [(ngModel)]="mode"
+        [disabled]="disabled()"
+        class="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+      >
+        <option value="new">Generate New</option>
+        <option value="revise_current">Revise Current</option>
+      </select>
+    </div>
+
+    <!-- Persona -->
+    <div class="control-group">
+      <h3 class="text-sm font-semibold text-slate-200 mb-2">Persona</h3>
+      <input
+        type="text"
+        [(ngModel)]="personaName"
+        [disabled]="disabled()"
+        placeholder="e.g., Government Spokesperson"
+        class="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2"
+      />
+      <textarea
+        [(ngModel)]="personaDetails"
+        [disabled]="disabled()"
+        placeholder="Optional: Persona details (e.g., speaks cautiously)"
+        rows="2"
+        class="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+      ></textarea>
+    </div>
+
+    <!-- Tone -->
+    <div class="control-group">
+      <label class="block text-sm font-medium text-slate-300 mb-2">Tone</label>
+      <select
+        [(ngModel)]="tone"
+        [disabled]="disabled()"
+        class="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+      >
+        @for (option of toneOptions; track option.value) {
+          <option [value]="option.value">{{ option.label }}</option>
+        }
+      </select>
+    </div>
+
+    <!-- Style -->
+    <div class="control-group">
+      <label class="block text-sm font-medium text-slate-300 mb-2">Writing Style</label>
+      <select
+        [(ngModel)]="style"
+        [disabled]="disabled()"
+        class="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+      >
+        @for (option of styleOptions; track option.value) {
+          <option [value]="option.value">{{ option.label }}</option>
+        }
+      </select>
+    </div>
+
+    <!-- Audience -->
+    <div class="control-group">
+      <label class="block text-sm font-medium text-slate-300 mb-2">Target Audience</label>
+      <select
+        [(ngModel)]="audience"
+        [disabled]="disabled()"
+        class="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+      >
+        @for (option of audienceOptions; track option.value) {
+          <option [value]="option.value">{{ option.label }}</option>
+        }
+      </select>
+    </div>
+
+    <!-- Format -->
+    <div class="control-group">
+      <h3 class="text-sm font-semibold text-slate-200 mb-2">Format</h3>
+
+      <label class="block text-xs text-slate-400 mb-1">Length</label>
+      <select
+        [(ngModel)]="length"
+        [disabled]="disabled()"
+        class="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2"
+      >
+        <option value="short">Short (200-400 words)</option>
+        <option value="medium">Medium (600-900 words)</option>
+        <option value="long">Long (1200-1800 words)</option>
+      </select>
+
+      <label class="block text-xs text-slate-400 mb-1">Template</label>
+      <select
+        [(ngModel)]="template"
+        [disabled]="disabled()"
+        class="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3"
+      >
+        @for (option of templateOptions; track option.value) {
+          <option [value]="option.value">{{ option.label }}</option>
+        }
+      </select>
+
+      <label class="block text-xs text-slate-400 mb-2">Include Sections</label>
+      <div class="space-y-2">
+        <label class="flex items-center text-sm text-slate-300 cursor-pointer">
+          <input
+            type="checkbox"
+            [(ngModel)]="includeBackground"
+            [disabled]="disabled()"
+            class="mr-2 rounded"
+          />
+          Background/Context
+        </label>
+        <label class="flex items-center text-sm text-slate-300 cursor-pointer">
+          <input
+            type="checkbox"
+            [(ngModel)]="includeWhatWeKnow"
+            [disabled]="disabled()"
+            class="mr-2 rounded"
+          />
+          What We Know / Don't Know
+        </label>
+        <label class="flex items-center text-sm text-slate-300 cursor-pointer">
+          <input
+            type="checkbox"
+            [(ngModel)]="includeRisks"
+            [disabled]="disabled()"
+            class="mr-2 rounded"
+          />
+          Risks/Uncertainty Disclaimer
+        </label>
+        <label class="flex items-center text-sm text-slate-300 cursor-pointer">
+          <input
+            type="checkbox"
+            [(ngModel)]="includeCallToAction"
+            [disabled]="disabled()"
+            class="mr-2 rounded"
+          />
+          Call to Action
+        </label>
+      </div>
+
+      <label class="block text-xs text-slate-400 mb-1 mt-3">Citations</label>
+      <select
+        [(ngModel)]="citations"
+        [disabled]="disabled()"
+        class="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+      >
+        <option value="none">None</option>
+        <option value="placeholders">Placeholders ([SOURCE NEEDED])</option>
+        <option value="explicit">Explicit Source Lines</option>
+      </select>
+    </div>
+
+    <!-- Constraints -->
+    <div class="control-group">
+      <h3 class="text-sm font-semibold text-slate-200 mb-2">Constraints</h3>
+
+      <label class="block text-xs text-slate-400 mb-1">Must Include (one per line)</label>
+      <textarea
+        [(ngModel)]="mustInclude"
+        [disabled]="disabled()"
+        placeholder="Key points to include..."
+        rows="2"
+        class="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2"
+      ></textarea>
+
+      <label class="block text-xs text-slate-400 mb-1">Must Avoid (one per line)</label>
+      <textarea
+        [(ngModel)]="mustAvoid"
+        [disabled]="disabled()"
+        placeholder="Topics to avoid..."
+        rows="2"
+        class="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2"
+      ></textarea>
+
+      <label class="block text-xs text-slate-400 mb-1">Banned Phrases (one per line)</label>
+      <textarea
+        [(ngModel)]="bannedPhrases"
+        [disabled]="disabled()"
+        placeholder="Phrases to never use..."
+        rows="2"
+        class="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+      ></textarea>
+    </div>
+
+    <!-- Legal/Safety -->
+    <div class="control-group">
+      <h3 class="text-sm font-semibold text-slate-200 mb-2">Legal & Safety</h3>
+      <div class="space-y-2">
+        <label class="flex items-center text-sm text-slate-300 cursor-pointer">
+          <input
+            type="checkbox"
+            [(ngModel)]="noDefamation"
+            [disabled]="disabled()"
+            class="mr-2 rounded"
+          />
+          No defamation without evidence
+        </label>
+        <label class="flex items-center text-sm text-slate-300 cursor-pointer">
+          <input
+            type="checkbox"
+            [(ngModel)]="noPersonalData"
+            [disabled]="disabled()"
+            class="mr-2 rounded"
+          />
+          No personal data
+        </label>
+        <label class="flex items-center text-sm text-slate-300 cursor-pointer">
+          <input
+            type="checkbox"
+            [(ngModel)]="noOperationalDetails"
+            [disabled]="disabled()"
+            class="mr-2 rounded"
+          />
+          No operational/security details
+        </label>
+      </div>
+    </div>
+
+    <!-- Generate Button -->
+    <button
+      (click)="onGenerate()"
+      [disabled]="disabled() || generating()"
+      class="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 disabled:cursor-not-allowed text-white font-semibold py-3 px-4 rounded transition-colors duration-200"
+    >
+      @if (generating()) {
+        <span>Generating...</span>
+      } @else {
+        <span>{{ mode() === 'new' ? 'Generate Content' : 'Revise Content' }}</span>
+      }
+    </button>
+  </div>
+</div>

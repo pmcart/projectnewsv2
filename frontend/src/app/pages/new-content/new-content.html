@@ -1,33 +1,108 @@
-<div class="p-6">
-  <div class="max-w-4xl mx-auto">
-    <h1 class="text-2xl font-bold text-white mb-6">New Content</h1>
-
-    <div class="bg-slate-900/60 rounded-lg border border-slate-800 p-6">
-      <div class="space-y-4">
-        <div>
-          <label class="block text-sm font-medium text-slate-400 mb-2">
-            Item ID
-          </label>
-          <div class="text-white font-mono text-sm bg-slate-800 px-3 py-2 rounded">
-            {{ itemId() || 'No ID provided' }}
-          </div>
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-slate-400 mb-2">
-            Item Type
-          </label>
-          <div class="text-white font-mono text-sm bg-slate-800 px-3 py-2 rounded">
-            {{ itemType() || 'No type provided' }}
-          </div>
-        </div>
-
-        <div class="pt-4 border-t border-slate-700">
-          <p class="text-sm text-slate-400">
-            This is a dummy component. The ID and type from the parent page have been successfully passed via route parameters.
-          </p>
-        </div>
+<div class="h-screen flex flex-col bg-slate-950">
+  <!-- Header -->
+  <div class="bg-slate-900 border-b border-slate-800 px-6 py-4">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-xl font-bold text-white">Content Generation</h1>
+        @if (document()) {
+          <p class="text-sm text-slate-400 mt-1">{{ document()!.title }}</p>
+        }
       </div>
+
+      @if (versions().length > 0) {
+        <button
+          (click)="toggleVersionHistory()"
+          class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded transition-colors flex items-center gap-2"
+        >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span>Version History ({{ versions().length }})</span>
+        </button>
+      }
     </div>
   </div>
+
+  <!-- Loading / Error States -->
+  @if (loading()) {
+    <div class="flex-1 flex items-center justify-center">
+      <div class="text-center">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+        <p class="text-slate-400">Loading...</p>
+      </div>
+    </div>
+  } @else if (error()) {
+    <div class="flex-1 flex items-center justify-center">
+      <div class="bg-red-900/20 border border-red-800 rounded-lg p-6 max-w-md">
+        <p class="text-red-400">{{ error() }}</p>
+      </div>
+    </div>
+  } @else if (!document()) {
+    <div class="flex-1 flex items-center justify-center">
+      <div class="text-center text-slate-400">
+        <p>No document loaded.</p>
+      </div>
+    </div>
+  } @else {
+    <!-- Two-Pane Layout -->
+    <div class="flex-1 flex overflow-hidden">
+      <!-- Left Panel: Generation Controls -->
+      <div class="w-96 border-r border-slate-800 overflow-hidden">
+        <app-generation-controls
+          [sourceText]="sourceText()"
+          [sourceType]="sourceType()"
+          [sourceUrl]="sourceUrl()"
+          [disabled]="generating() || isReadonly()"
+          (generate)="onGenerate($event)"
+        />
+      </div>
+
+      <!-- Right Panel: Editor + Review -->
+      <div class="flex-1 flex flex-col overflow-hidden">
+        <!-- HTML Editor -->
+        <div class="flex-1 overflow-hidden">
+          <app-html-content-editor
+            [htmlContent]="currentHtml()"
+            [readonly]="isReadonly()"
+            [label]="'Content Editor'"
+            (contentChange)="onContentChange($event)"
+            (save)="onSave($event)"
+          />
+        </div>
+
+        <!-- Review Panel -->
+        @if (document()) {
+          <app-review-panel
+            [status]="document()!.status"
+            [userRole]="currentUser()?.role || 'READER'"
+            [isOwner]="isOwner()"
+            (submit)="onSubmitForReview()"
+            (approve)="onApprove($event)"
+            (reject)="onReject($event)"
+          />
+        }
+      </div>
+    </div>
+  }
+
+  <!-- Version History Drawer -->
+  <app-version-history
+    [versions]="versions()"
+    [currentVersionId]="currentVersion()?.id"
+    [isOpen]="versionHistoryOpen()"
+    (close)="versionHistoryOpen.set(false)"
+    (selectVersion)="onSelectVersion($event)"
+  />
+
+  <!-- Generating Overlay -->
+  @if (generating()) {
+    <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div class="bg-slate-900 border border-slate-700 rounded-lg p-8 shadow-2xl">
+        <div class="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500 mx-auto mb-4"></div>
+        <p class="text-white text-lg font-semibold text-center">Generating content...</p>
+        <p class="text-slate-400 text-sm text-center mt-2">This may take a few moments</p>
+      </div>
+    </div>
+  }
 </div>
+

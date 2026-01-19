@@ -1,0 +1,155 @@
+<div class="html-editor h-full flex flex-col bg-slate-900/40">
+  <!-- Toolbar -->
+  <div class="editor-toolbar bg-slate-800/50 border-b border-slate-700 p-2 flex items-center gap-2 flex-wrap">
+    <span class="text-xs text-slate-400 font-medium mr-2">{{ label() }}</span>
+
+    @if (viewMode() === 'wysiwyg' && !readonly()) {
+      <!-- Formatting buttons -->
+      <button
+        type="button"
+        (click)="execCommand('bold')"
+        class="toolbar-btn"
+        title="Bold"
+      >
+        <strong>B</strong>
+      </button>
+      <button
+        type="button"
+        (click)="execCommand('italic')"
+        class="toolbar-btn"
+        title="Italic"
+      >
+        <em>I</em>
+      </button>
+      <button
+        type="button"
+        (click)="execCommand('underline')"
+        class="toolbar-btn"
+        title="Underline"
+      >
+        <u>U</u>
+      </button>
+
+      <div class="w-px h-6 bg-slate-600"></div>
+
+      <button
+        type="button"
+        (click)="insertHeading(1)"
+        class="toolbar-btn"
+        title="Heading 1"
+      >
+        H1
+      </button>
+      <button
+        type="button"
+        (click)="insertHeading(2)"
+        class="toolbar-btn"
+        title="Heading 2"
+      >
+        H2
+      </button>
+      <button
+        type="button"
+        (click)="insertHeading(3)"
+        class="toolbar-btn"
+        title="Heading 3"
+      >
+        H3
+      </button>
+
+      <div class="w-px h-6 bg-slate-600"></div>
+
+      <button
+        type="button"
+        (click)="execCommand('insertUnorderedList')"
+        class="toolbar-btn"
+        title="Bullet List"
+      >
+        • List
+      </button>
+      <button
+        type="button"
+        (click)="execCommand('insertOrderedList')"
+        class="toolbar-btn"
+        title="Numbered List"
+      >
+        1. List
+      </button>
+
+      <div class="w-px h-6 bg-slate-600"></div>
+
+      <button
+        type="button"
+        (click)="clearFormatting()"
+        class="toolbar-btn"
+        title="Clear Formatting"
+      >
+        Clear
+      </button>
+    }
+
+    <div class="flex-1"></div>
+
+    <!-- View mode toggle -->
+    <button
+      type="button"
+      (click)="toggleViewMode()"
+      class="toolbar-btn"
+      [class.bg-blue-600]="viewMode() === 'html'"
+    >
+      {{ viewMode() === 'wysiwyg' ? 'View HTML' : 'View WYSIWYG' }}
+    </button>
+
+    <!-- Save button -->
+    @if (!readonly()) {
+      <button
+        type="button"
+        (click)="onSave()"
+        [disabled]="!isDirty()"
+        class="px-3 py-1 bg-green-600 hover:bg-green-700 disabled:bg-slate-700 disabled:cursor-not-allowed text-white text-sm rounded transition-colors"
+      >
+        Save
+        @if (isDirty()) {
+          <span class="ml-1">*</span>
+        }
+      </button>
+    }
+  </div>
+
+  <!-- Editor content -->
+  <div class="editor-content flex-1 overflow-y-auto p-4">
+    @if (viewMode() === 'wysiwyg') {
+      <div
+        #editorContent
+        [contentEditable]="!readonly()"
+        (input)="onContentInput()"
+        [class.readonly]="readonly()"
+        class="prose prose-invert max-w-none min-h-full focus:outline-none bg-white/5 rounded p-4"
+      ></div>
+    } @else {
+      @if (readonly()) {
+        <pre class="bg-slate-800 rounded p-4 text-xs text-slate-300 overflow-x-auto">{{ htmlSource() }}</pre>
+      } @else {
+        <textarea
+          [value]="htmlSource()"
+          (input)="onHtmlSourceChange($any($event.target).value)"
+          class="w-full h-full bg-slate-800 border border-slate-700 rounded p-4 text-sm text-slate-300 font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+          spellcheck="false"
+        ></textarea>
+      }
+    }
+  </div>
+
+  <!-- Status bar -->
+  <div class="editor-statusbar bg-slate-800/50 border-t border-slate-700 px-4 py-2 flex items-center justify-between text-xs text-slate-400">
+    <span>
+      {{ viewMode() === 'wysiwyg' ? 'WYSIWYG Mode' : 'HTML Source Mode' }}
+      @if (readonly()) {
+        <span class="ml-2 text-amber-400">(Read-only)</span>
+      }
+    </span>
+    @if (isDirty()) {
+      <span class="text-amber-400">Unsaved changes</span>
+    }
+  </div>
+</div>

@@ -1,0 +1,30 @@
+.generation-controls {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.5) transparent;
+}
+
+.generation-controls::-webkit-scrollbar {
+  width: 8px;
+}
+
+.generation-controls::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.generation-controls::-webkit-scrollbar-thumb {
+  background-color: rgba(148, 163, 184, 0.5);
+  border-radius: 4px;
+}
+
+.generation-controls::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(148, 163, 184, 0.7);
+}
+
+.control-group {
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.control-group:last-of-type {
+  border-bottom: none;
+}

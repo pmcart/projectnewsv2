@@ -1,0 +1,11 @@
+.content-review-page {
+  min-height: 100vh;
+}
+
+table {
+  border-collapse: collapse;
+}
+
+tbody tr {
+  transition: background-color 0.2s ease;
+}

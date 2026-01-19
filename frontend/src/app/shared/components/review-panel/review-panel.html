@@ -1,0 +1,116 @@
+<div class="review-panel bg-slate-900/40 border-t border-slate-700 p-4">
+  <!-- Status Badge -->
+  <div class="flex items-center justify-between mb-4">
+    <div class="flex items-center gap-3">
+      <span class="text-sm font-medium text-slate-400">Status:</span>
+      <span [class]="statusColor" class="px-3 py-1 rounded-full text-sm font-semibold">
+        {{ status() }}
+      </span>
+    </div>
+
+    @if (status() === 'IN_REVIEW' && userRole() === 'READER') {
+      <span class="text-xs text-amber-400">Read-only (in review)</span>
+    }
+
+    @if (status() === 'APPROVED') {
+      <span class="text-xs text-green-400">Approved & Locked</span>
+    }
+  </div>
+
+  <!-- Action Buttons -->
+  <div class="space-y-3">
+    @if (!showNotesInput()) {
+      <!-- Submit for Review -->
+      @if (canSubmit) {
+        <button
+          (click)="onSubmitForReview()"
+          class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded transition-colors"
+        >
+          Submit for Review
+        </button>
+      }
+
+      <!-- Approve / Reject -->
+      @if (canApproveOrReject) {
+        <div class="flex gap-3">
+          <button
+            (click)="startApprove()"
+            class="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded transition-colors"
+          >
+            Approve
+          </button>
+          <button
+            (click)="startReject()"
+            class="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded transition-colors"
+          >
+            Reject
+          </button>
+        </div>
+      }
+    }
+
+    <!-- Notes Input (for approve/reject) -->
+    @if (showNotesInput()) {
+      <div class="bg-slate-800/60 border border-slate-700 rounded p-4 space-y-3">
+        <div>
+          <label class="block text-sm font-medium text-slate-300 mb-2">
+            @if (actionType() === 'approve') {
+              <span>Approval Notes (optional)</span>
+            } @else {
+              <span class="text-red-400">Rejection Notes (required, min 10 chars)</span>
+            }
+          </label>
+          <textarea
+            [(ngModel)]="notes"
+            rows="4"
+            [placeholder]="actionType() === 'approve' ? 'Optional notes about approval...' : 'Required: Explain why this is being rejected and what needs to change...'"
+            class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+          ></textarea>
+          @if (actionType() === 'reject') {
+            <p class="text-xs text-slate-400 mt-1">
+              Character count: {{ notes().length }} / 10 minimum
+            </p>
+          }
+        </div>
+
+        <div class="flex gap-2">
+          <button
+            (click)="confirmAction()"
+            [disabled]="actionType() === 'reject' && notes().trim().length < 10"
+            class="flex-1 font-semibold py-2 px-4 rounded transition-colors"
+            [class]="actionType() === 'approve'
+              ? 'bg-green-600 hover:bg-green-700 text-white'
+              : 'bg-red-600 hover:bg-red-700 text-white disabled:bg-slate-700 disabled:cursor-not-allowed'"
+          >
+            Confirm {{ actionType() === 'approve' ? 'Approval' : 'Rejection' }}
+          </button>
+          <button
+            (click)="cancelAction()"
+            class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2 px-4 rounded transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    }
+  </div>
+
+  <!-- Info Message -->
+  @if (!showNotesInput()) {
+    <div class="mt-4 pt-4 border-t border-slate-700">
+      <p class="text-xs text-slate-400">
+        @if (status() === 'DRAFT') {
+          <span>Document is in draft mode. Submit for review when ready.</span>
+        } @else if (status() === 'IN_REVIEW') {
+          @if (userRole() === 'READER') {
+            <span>This document is under review. You cannot edit it.</span>
+          } @else {
+            <span>This document is under review. Editors can approve, reject, or make inline edits.</span>
+          }
+        } @else if (status() === 'APPROVED') {
+          <span>This document has been approved and is locked.</span>
+        }
+      </p>
+    </div>
+  }
+</div>

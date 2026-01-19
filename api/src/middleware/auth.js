@@ -70,4 +70,7 @@ function requireRole(...allowedRoles) {
   };
 }
 
-module.exports = { apiKeyAuth, jwtAuth, requireRole };
+// Alias for convenience
+const requireAuth = jwtAuth;
+
+module.exports = { apiKeyAuth, jwtAuth, requireAuth, requireRole };

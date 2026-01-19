@@ -4,6 +4,8 @@ import { AdminLayoutComponent } from './pages/admin-layout/admin-layout';
 import { BreakingNewsComponent } from './pages/breaking-news/breaking-news';
 import { RssFeedComponent } from './pages/news-feed/rss-feed';
 import { NewContentComponent } from './pages/new-content/new-content';
+import { ContentReviewComponent } from './pages/content-review/content-review';
+import { LiveStreamsComponent } from './pages/live-streams/live-streams';
 import { authGuard } from './guards/auth.guard';
 
 export const routes: Routes = [
@@ -47,6 +49,22 @@ export const routes: Routes = [
         data: {
           title: 'New Content',
           subtitle: 'Create new content from selected items.'
+        }
+      },
+      {
+        path: 'content-review',
+        component: ContentReviewComponent,
+        data: {
+          title: 'Content Review',
+          subtitle: 'Review and manage submitted content.'
+        }
+      },
+      {
+        path: 'live-streams',
+        component: LiveStreamsComponent,
+        data: {
+          title: 'Live News Streams',
+          subtitle: 'Watch live news from multiple sources around the world.'
         }
       }
 
