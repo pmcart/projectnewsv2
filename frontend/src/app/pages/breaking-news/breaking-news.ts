@@ -10,6 +10,7 @@ import {
 } from '../../services/breaking-news.service';
 import { MediaEmbedComponent } from '../../shared/components/media-embed/media-embed.component';
 import { NewContentButtonComponent } from '../../shared/components/new-content-button/new-content-button.component';
+import { NewVideoButtonComponent } from '../../shared/components/new-video-button/new-video-button.component';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { JobsService, JobRecord } from '../../services/jobs.service';
@@ -19,7 +20,7 @@ import { catchError, switchMap, tap } from 'rxjs/operators';
 @Component({
   selector: 'app-breaking-news',
   standalone: true,
-  imports: [CommonModule, MediaEmbedComponent, NewContentButtonComponent],
+  imports: [CommonModule, MediaEmbedComponent, NewContentButtonComponent, NewVideoButtonComponent],
   templateUrl: './breaking-news.html'
 })
 export class BreakingNewsComponent implements OnInit {

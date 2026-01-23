@@ -1,0 +1,136 @@
+<div class="video-generation-controls h-full overflow-y-auto bg-slate-900/40 p-4">
+  <h2 class="text-lg font-semibold text-white mb-4">Video Generation Controls</h2>
+
+  <div class="space-y-6">
+    <!-- Tone -->
+    <div class="control-group">
+      <label class="block text-sm font-medium text-slate-300 mb-2">Tone</label>
+      <select
+        [(ngModel)]="tone"
+        [disabled]="disabled()"
+        class="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+      >
+        @for (option of toneOptions; track option.value) {
+          <option [value]="option.value">{{ option.label }}</option>
+        }
+      </select>
+    </div>
+
+    <!-- Style -->
+    <div class="control-group">
+      <label class="block text-sm font-medium text-slate-300 mb-2">Video Style</label>
+      <select
+        [(ngModel)]="style"
+        [disabled]="disabled()"
+        class="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+      >
+        @for (option of styleOptions; track option.value) {
+          <option [value]="option.value">{{ option.label }}</option>
+        }
+      </select>
+    </div>
+
+    <!-- Format -->
+    <div class="control-group">
+      <h3 class="text-sm font-semibold text-slate-200 mb-2">Format</h3>
+
+      <label class="block text-xs text-slate-400 mb-1">Duration</label>
+      <select
+        [(ngModel)]="duration"
+        [disabled]="disabled()"
+        class="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2"
+      >
+        @for (option of durationOptions; track option.value) {
+          <option [value]="option.value">{{ option.label }}</option>
+        }
+      </select>
+
+      <label class="block text-xs text-slate-400 mb-1">Aspect Ratio</label>
+      <select
+        [(ngModel)]="aspectRatio"
+        [disabled]="disabled()"
+        class="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2"
+      >
+        @for (option of aspectRatioOptions; track option.value) {
+          <option [value]="option.value">{{ option.label }}</option>
+        }
+      </select>
+
+      <label class="block text-xs text-slate-400 mb-1">Template</label>
+      <select
+        [(ngModel)]="template"
+        [disabled]="disabled()"
+        class="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+      >
+        @for (option of templateOptions; track option.value) {
+          <option [value]="option.value">{{ option.label }}</option>
+        }
+      </select>
+    </div>
+
+    <!-- Audio -->
+    <div class="control-group">
+      <h3 class="text-sm font-semibold text-slate-200 mb-2">Audio</h3>
+
+      <label class="block text-xs text-slate-400 mb-1">Voice</label>
+      <select
+        [(ngModel)]="voice"
+        [disabled]="disabled()"
+        class="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2"
+      >
+        @for (option of voiceOptions; track option.value) {
+          <option [value]="option.value">{{ option.label }}</option>
+        }
+      </select>
+
+      <label class="block text-xs text-slate-400 mb-1">Background Music</label>
+      <select
+        [(ngModel)]="musicStyle"
+        [disabled]="disabled()"
+        class="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+      >
+        @for (option of musicStyleOptions; track option.value) {
+          <option [value]="option.value">{{ option.label }}</option>
+        }
+      </select>
+    </div>
+
+    <!-- Options -->
+    <div class="control-group">
+      <h3 class="text-sm font-semibold text-slate-200 mb-2">Options</h3>
+      <div class="space-y-2">
+        <label class="flex items-center text-sm text-slate-300 cursor-pointer">
+          <input
+            type="checkbox"
+            [(ngModel)]="includeSubtitles"
+            [disabled]="disabled()"
+            class="mr-2 rounded"
+          />
+          Include Subtitles
+        </label>
+        <label class="flex items-center text-sm text-slate-300 cursor-pointer">
+          <input
+            type="checkbox"
+            [(ngModel)]="includeLogo"
+            [disabled]="disabled()"
+            class="mr-2 rounded"
+          />
+          Include Logo/Branding
+        </label>
+      </div>
+    </div>
+
+    <!-- Generate Button -->
+    <button
+      (click)="onGenerate()"
+      [disabled]="disabled() || generating()"
+      class="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 disabled:cursor-not-allowed text-white font-semibold py-3 px-4 rounded transition-colors duration-200"
+    >
+      @if (generating()) {
+        <span>Generating...</span>
+      } @else {
+        <span>Generate Video</span>
+      }
+    </button>
+  </div>
+</div>

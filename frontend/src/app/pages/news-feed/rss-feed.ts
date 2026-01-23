@@ -9,6 +9,7 @@ import {
   GoogleNewsItem
 } from '../../services/rss-feed.service';
 import { NewContentButtonComponent } from '../../shared/components/new-content-button/new-content-button.component';
+import { NewVideoButtonComponent } from '../../shared/components/new-video-button/new-video-button.component';
 
 type Category =
   | 'world' | 'nation' | 'business' | 'technology' | 'entertainment'
@@ -19,7 +20,7 @@ type EnrichLevel = 'none' | 'light' | 'full';
 @Component({
   selector: 'app-rss-feed',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, NewContentButtonComponent],
+  imports: [CommonModule, ReactiveFormsModule, NewContentButtonComponent, NewVideoButtonComponent],
   templateUrl: './rss-feed.html'
 })
 export class RssFeedComponent implements OnInit {

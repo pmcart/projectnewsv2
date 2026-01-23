@@ -1,6 +1,6 @@
 import { Component, OnInit, signal, inject, DestroyRef, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   BreakingNewsService,
@@ -113,6 +113,7 @@ export class NewContentComponent implements OnInit {
   private readonly contentGenService = inject(ContentGenerationService);
   private readonly authService = inject(AuthService);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
 
   ngOnInit(): void {
@@ -121,6 +122,10 @@ export class NewContentComponent implements OnInit {
     if (user) {
       this.currentUser.set(user);
     }
+
+    // Check for navigation state data first
+    const navigation = this.router.getCurrentNavigation();
+    const stateData = navigation?.extras?.state?.['itemData'] || history.state?.['itemData'];
 
     // Get route params and fetch source item
     this.route.queryParams
@@ -136,7 +141,14 @@ export class NewContentComponent implements OnInit {
         const type = this.itemType();
 
         if (id && type) {
-          this.fetchItem(id, type);
+          // If we have navigation state data, use it directly
+          if (stateData && type === 'rss-feed') {
+            this.rssFeedItem.set(stateData);
+            this.createDocument();
+          } else {
+            // Otherwise fetch from API
+            this.fetchItem(id, type);
+          }
         }
       });
   }

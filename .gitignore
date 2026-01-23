@@ -118,3 +118,6 @@ api/prisma/schema.prisma
 CONTENT_GENERATION_FEATURE.md
 designdoc.txt
 api/prisma/migrations/migration_lock.toml
+api/nul
+ffmpeg.zip
+api/package-lock.json

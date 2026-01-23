@@ -6,6 +6,32 @@
       <p class="text-slate-400">Manage and review submitted content</p>
     </div>
 
+    <!-- Tabs -->
+    <div class="mb-6 border-b border-slate-700">
+      <nav class="flex gap-4">
+        <button
+          (click)="onTabChange('documents')"
+          [class.border-blue-500]="activeTab() === 'documents'"
+          [class.text-white]="activeTab() === 'documents'"
+          [class.border-transparent]="activeTab() !== 'documents'"
+          [class.text-slate-400]="activeTab() !== 'documents'"
+          class="px-4 py-2 border-b-2 font-medium transition-colors hover:text-white"
+        >
+          Documents
+        </button>
+        <button
+          (click)="onTabChange('videos')"
+          [class.border-purple-500]="activeTab() === 'videos'"
+          [class.text-white]="activeTab() === 'videos'"
+          [class.border-transparent]="activeTab() !== 'videos'"
+          [class.text-slate-400]="activeTab() !== 'videos'"
+          class="px-4 py-2 border-b-2 font-medium transition-colors hover:text-white"
+        >
+          Videos
+        </button>
+      </nav>
+    </div>
+
     <!-- Filters -->
     <div class="bg-slate-900/60 rounded-lg border border-slate-800 p-4 mb-6">
       <div class="flex items-center gap-4">
@@ -16,15 +42,25 @@
           class="bg-slate-800 border border-slate-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           <option value="all">All Statuses</option>
-          <option value="DRAFT">Draft</option>
-          <option value="IN_REVIEW">In Review</option>
-          <option value="APPROVED">Approved</option>
+          @if (activeTab() === 'documents') {
+            <option value="DRAFT">Draft</option>
+            <option value="IN_REVIEW">In Review</option>
+            <option value="APPROVED">Approved</option>
+          } @else {
+            <option value="DRAFT">Draft</option>
+            <option value="GENERATING">Generating</option>
+            <option value="GENERATED">Generated</option>
+            <option value="IN_REVIEW">In Review</option>
+            <option value="APPROVED">Approved</option>
+            <option value="REJECTED">Rejected</option>
+            <option value="FAILED">Failed</option>
+          }
         </select>
 
         <div class="flex-1"></div>
 
         <button
-          (click)="loadDocuments()"
+          (click)="loadContent()"
           class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded transition-colors flex items-center gap-2"
         >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -53,7 +89,7 @@
     }
 
     <!-- Empty State -->
-    @else if (documents().length === 0) {
+    @else if (activeTab() === 'documents' && documents().length === 0) {
       <div class="bg-slate-900/60 rounded-lg border border-slate-800 p-12 text-center">
         <svg class="w-16 h-16 mx-auto mb-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -63,8 +99,18 @@
       </div>
     }
 
+    @else if (activeTab() === 'videos' && videos().length === 0) {
+      <div class="bg-slate-900/60 rounded-lg border border-slate-800 p-12 text-center">
+        <svg class="w-16 h-16 mx-auto mb-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+        </svg>
+        <p class="text-slate-400 text-lg mb-2">No videos found</p>
+        <p class="text-slate-500 text-sm">Try changing your filter or create new videos</p>
+      </div>
+    }
+
     <!-- Documents List -->
-    @else {
+    @else if (activeTab() === 'documents') {
       <div class="bg-slate-900/60 rounded-lg border border-slate-800 overflow-hidden">
         <table class="w-full">
           <thead class="bg-slate-800/60 border-b border-slate-700">
@@ -149,6 +195,106 @@
       <!-- Summary -->
       <div class="mt-4 text-sm text-slate-400">
         Showing {{ documents().length }} document(s)
+      </div>
+    }
+
+    <!-- Videos List -->
+    @else if (activeTab() === 'videos') {
+      <div class="bg-slate-900/60 rounded-lg border border-slate-800 overflow-hidden">
+        <table class="w-full">
+          <thead class="bg-slate-800/60 border-b border-slate-700">
+            <tr>
+              <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Title</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Status</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Author</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Source</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Updated</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-700">
+            @for (video of videos(); track video.id) {
+              <tr
+                (click)="onViewVideo(video)"
+                class="hover:bg-slate-800/40 transition-colors cursor-pointer"
+                [class.opacity-50]="processingVideoId() === video.id"
+              >
+                <td class="px-6 py-4">
+                  <div class="flex items-center gap-3">
+                    @if (video.thumbnailUrl) {
+                      <img [src]="video.thumbnailUrl" alt="Thumbnail" class="w-16 h-9 object-cover rounded border border-slate-700">
+                    } @else {
+                      <div class="w-16 h-9 bg-slate-800 rounded border border-slate-700 flex items-center justify-center">
+                        <svg class="w-6 h-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                    }
+                    <div class="flex flex-col">
+                      <span class="text-white font-medium">{{ video.title }}</span>
+                      @if (video.duration) {
+                        <span class="text-xs text-slate-500 mt-1">
+                          {{ video.duration }}s
+                        </span>
+                      }
+                    </div>
+                  </div>
+                </td>
+                <td class="px-6 py-4">
+                  <span [class]="getVideoStatusColor(video.status)" class="px-2 py-1 rounded-full text-xs font-semibold">
+                    {{ video.status }}
+                  </span>
+                </td>
+                <td class="px-6 py-4">
+                  <div class="text-sm text-slate-300">
+                    {{ video.owner.firstName }} {{ video.owner.lastName }}
+                  </div>
+                  <div class="text-xs text-slate-500">{{ video.owner.role }}</div>
+                </td>
+                <td class="px-6 py-4">
+                  <span class="text-sm text-slate-400">{{ video.sourceType }}</span>
+                </td>
+                <td class="px-6 py-4">
+                  <div class="text-sm text-slate-400">{{ formatDate(video.updatedAt) }}</div>
+                </td>
+                <td class="px-6 py-4">
+                  <div class="flex items-center gap-2" (click)="$event.stopPropagation()">
+                    @if (canApproveOrRejectVideo(video)) {
+                      <button
+                        (click)="onQuickApproveVideo(video, $event)"
+                        [disabled]="processingVideoId() === video.id"
+                        class="px-3 py-1 bg-green-600 hover:bg-green-700 disabled:bg-slate-700 disabled:cursor-not-allowed text-white text-xs rounded transition-colors"
+                        title="Quick Approve"
+                      >
+                        Approve
+                      </button>
+                      <button
+                        (click)="onQuickRejectVideo(video, $event)"
+                        [disabled]="processingVideoId() === video.id"
+                        class="px-3 py-1 bg-red-600 hover:bg-red-700 disabled:bg-slate-700 disabled:cursor-not-allowed text-white text-xs rounded transition-colors"
+                        title="Quick Reject"
+                      >
+                        Reject
+                      </button>
+                    } @else {
+                      <button
+                        (click)="onViewVideo(video)"
+                        class="px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white text-xs rounded transition-colors"
+                      >
+                        View
+                      </button>
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Summary -->
+      <div class="mt-4 text-sm text-slate-400">
+        Showing {{ videos().length }} video(s)
       </div>
     }
   </div>

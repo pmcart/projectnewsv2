@@ -10,6 +10,11 @@
         [itemType]="'breaking-news'">
       </app-new-content-button>
 
+      <app-new-video-button
+        [itemId]="selectedId()"
+        [itemType]="'breaking-news'">
+      </app-new-video-button>
+
       <button
         type="button"
         (click)="openLiveFeedModal(); startLiveFeed()"

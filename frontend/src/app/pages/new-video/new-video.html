@@ -1,0 +1,279 @@
+<div class="h-screen flex flex-col bg-slate-950">
+  <!-- Header -->
+  <div class="bg-slate-900 border-b border-slate-800 px-6 py-4">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-xl font-bold text-white">Video Generation</h1>
+        @if (sourceText()) {
+          <p class="text-sm text-slate-400 mt-1">{{ sourceText() }}</p>
+        }
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading / Error States -->
+  @if (loading()) {
+    <div class="flex-1 flex items-center justify-center">
+      <div class="text-center">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+        <p class="text-slate-400">Loading...</p>
+      </div>
+    </div>
+  } @else if (error()) {
+    <div class="flex-1 flex items-center justify-center">
+      <div class="bg-red-900/20 border border-red-800 rounded-lg p-6 max-w-md">
+        <p class="text-red-400">{{ error() }}</p>
+      </div>
+    </div>
+  } @else if (!sourceText()) {
+    <div class="flex-1 flex items-center justify-center">
+      <div class="text-center text-slate-400">
+        <p>No source item loaded.</p>
+      </div>
+    </div>
+  } @else {
+    <!-- Two-Pane Layout -->
+    <div class="flex-1 flex overflow-hidden">
+      <!-- Left Panel: Video Generation Controls -->
+      <div class="w-96 border-r border-slate-800 overflow-hidden">
+        <app-video-generation-controls
+          [sourceText]="sourceText()"
+          [sourceUrl]="sourceUrl()"
+          [disabled]="generating()"
+          (generate)="onGenerate($event)"
+        />
+      </div>
+
+      <!-- Right Panel: Video Display -->
+      <div class="flex-1 flex flex-col overflow-hidden bg-slate-900/40">
+        <!-- Generate/Render Button Bar -->
+        <div class="border-b border-slate-800 px-6 py-4 bg-slate-900/60">
+          <div class="flex items-center gap-4">
+            <button
+              (click)="onGenerateFromCurrentSettings()"
+              [disabled]="generating() || rendering() || !video()"
+              class="px-6 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-slate-700 disabled:cursor-not-allowed text-white font-medium rounded transition-colors flex items-center gap-2"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              Generate Assets
+            </button>
+
+            @if (isRenderReady()) {
+              <button
+                (click)="onRenderVideo()"
+                [disabled]="rendering()"
+                class="px-6 py-2 bg-green-600 hover:bg-green-700 disabled:bg-slate-700 disabled:cursor-not-allowed text-white font-medium rounded transition-colors flex items-center gap-2"
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+                Render Video
+              </button>
+            }
+          </div>
+        </div>
+
+        <div class="flex-1 overflow-auto p-6">
+          @if (videoUrl()) {
+            <!-- Video Player -->
+            <div class="w-full max-w-4xl mx-auto">
+              <div class="aspect-video bg-black rounded-lg overflow-hidden shadow-2xl">
+                <video
+                  [src]="videoUrl()!"
+                  controls
+                  class="w-full h-full"
+                >
+                  Your browser does not support the video tag.
+                </video>
+              </div>
+              @if (thumbnailUrl()) {
+                <div class="mt-4">
+                  <p class="text-sm text-slate-400 mb-2">Thumbnail:</p>
+                  <img [src]="thumbnailUrl()!" alt="Video thumbnail" class="max-w-xs rounded-lg border border-slate-700">
+                </div>
+              }
+            </div>
+          } @else if (images().length > 0 || assetStatus() !== 'PENDING') {
+            <!-- Asset Generation Progress -->
+            <div class="w-full max-w-5xl mx-auto">
+              <!-- Progress Header -->
+              <div class="bg-slate-800/50 rounded-lg p-4 mb-6">
+                <div class="flex items-center justify-between mb-2">
+                  <h3 class="text-white font-semibold">Asset Generation</h3>
+                  <span class="px-3 py-1 rounded-full text-sm font-medium"
+                    [ngClass]="{
+                      'bg-yellow-500/20 text-yellow-400': assetStatus() === 'PENDING',
+                      'bg-blue-500/20 text-blue-400': assetStatus() === 'GENERATING',
+                      'bg-green-500/20 text-green-400': assetStatus() === 'COMPLETED',
+                      'bg-orange-500/20 text-orange-400': assetStatus() === 'PARTIAL',
+                      'bg-red-500/20 text-red-400': assetStatus() === 'FAILED'
+                    }">
+                    {{ assetStatus() }}
+                  </span>
+                </div>
+                @if (assetProgress()) {
+                  <div class="flex gap-6 text-sm text-slate-400">
+                    <span>Scenes: {{ assetProgress()!.totalScenes }}</span>
+                    <span>Images: {{ assetProgress()!.imagesCompleted }}/{{ assetProgress()!.totalScenes }}</span>
+                    <span>Audio: {{ assetProgress()!.audioCompleted }}/{{ assetProgress()!.totalScenes }}</span>
+                  </div>
+                  <!-- Progress Bar -->
+                  @if (assetProgress()!.totalScenes > 0) {
+                    <div class="mt-3 h-2 bg-slate-700 rounded-full overflow-hidden">
+                      <div
+                        class="h-full bg-blue-500 transition-all duration-300"
+                        [style.width.%]="((assetProgress()!.imagesCompleted + assetProgress()!.audioCompleted) / (assetProgress()!.totalScenes * 2)) * 100">
+                      </div>
+                    </div>
+                  }
+                }
+              </div>
+
+              <!-- Render Progress -->
+              @if (renderProgress()) {
+                <div class="bg-green-900/20 border border-green-800 rounded-lg p-4 mb-6">
+                  <div class="flex items-center justify-between mb-2">
+                    <h3 class="text-white font-semibold">Video Rendering</h3>
+                    <span class="px-3 py-1 rounded-full text-sm font-medium"
+                      [ngClass]="{
+                        'bg-blue-500/20 text-blue-400': renderProgress()!.stage !== 'COMPLETED' && renderProgress()!.stage !== 'FAILED',
+                        'bg-green-500/20 text-green-400': renderProgress()!.stage === 'COMPLETED',
+                        'bg-red-500/20 text-red-400': renderProgress()!.stage === 'FAILED'
+                      }">
+                      {{ renderProgress()!.stage }}
+                    </span>
+                  </div>
+                  <div class="text-sm text-slate-400 mb-2">
+                    @switch (renderProgress()!.stage) {
+                      @case ('PREPARING') { Preparing files for rendering... }
+                      @case ('RENDERING_SCENES') { Rendering scene {{ renderProgress()!.currentScene }} of {{ renderProgress()!.totalScenes }}... }
+                      @case ('CONCATENATING') { Combining video clips... }
+                      @case ('GENERATING_THUMBNAIL') { Creating thumbnail... }
+                      @case ('UPLOADING') { Uploading final video... }
+                      @case ('COMPLETED') { Video rendering complete! }
+                      @case ('FAILED') { Rendering failed. Please try again. }
+                    }
+                  </div>
+                  <!-- Render Progress Bar -->
+                  <div class="h-2 bg-slate-700 rounded-full overflow-hidden">
+                    <div
+                      class="h-full transition-all duration-300"
+                      [ngClass]="{
+                        'bg-green-500': renderProgress()!.stage === 'COMPLETED',
+                        'bg-red-500': renderProgress()!.stage === 'FAILED',
+                        'bg-blue-500': renderProgress()!.stage !== 'COMPLETED' && renderProgress()!.stage !== 'FAILED'
+                      }"
+                      [style.width.%]="renderProgress()!.progress">
+                    </div>
+                  </div>
+                </div>
+              }
+
+              <!-- Scene Cards Grid -->
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                @for (image of images(); track image.id) {
+                  <div class="bg-slate-800/50 rounded-lg overflow-hidden border border-slate-700">
+                    <!-- Image -->
+                    @if (image.signedUrl && !image.errorMessage) {
+                      <div class="aspect-video bg-slate-900">
+                        <img
+                          [src]="image.signedUrl"
+                          [alt]="'Scene ' + image.sceneNumber"
+                          class="w-full h-full object-cover"
+                        />
+                      </div>
+                    } @else if (image.errorMessage) {
+                      <div class="aspect-video bg-red-900/20 flex items-center justify-center">
+                        <div class="text-center p-4">
+                          <svg class="w-8 h-8 mx-auto text-red-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                          </svg>
+                          <p class="text-red-400 text-xs">Image failed</p>
+                        </div>
+                      </div>
+                    } @else {
+                      <div class="aspect-video bg-slate-900 flex items-center justify-center">
+                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                      </div>
+                    }
+
+                    <!-- Scene Info -->
+                    <div class="p-3">
+                      <div class="flex items-center justify-between mb-2">
+                        <span class="text-white font-medium">Scene {{ image.sceneNumber }}</span>
+                        <!-- Audio indicator -->
+                        @if (getAudioForScene(image.sceneNumber); as audio) {
+                          @if (audio.signedUrl && !audio.errorMessage) {
+                            <button
+                              (click)="playAudio(audio.signedUrl!)"
+                              class="p-1.5 bg-blue-600 hover:bg-blue-700 rounded-full transition-colors"
+                              title="Play narration">
+                              <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M8 5v14l11-7z"/>
+                              </svg>
+                            </button>
+                          } @else if (audio.errorMessage) {
+                            <span class="text-red-400 text-xs">Audio failed</span>
+                          } @else {
+                            <div class="animate-pulse bg-slate-600 rounded-full w-8 h-8"></div>
+                          }
+                        }
+                      </div>
+                      <p class="text-slate-400 text-xs line-clamp-2" [title]="image.imagePrompt">{{ image.imagePrompt }}</p>
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+          } @else {
+            <!-- Placeholder -->
+            <div class="flex items-center justify-center h-full">
+              <div class="text-center">
+                <svg class="w-24 h-24 mx-auto text-slate-700 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+                <p class="text-slate-400 text-lg">No video generated yet</p>
+                <p class="text-slate-500 text-sm mt-2">Configure settings and click Generate Video</p>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Generating Overlay -->
+  @if (generating()) {
+    <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div class="bg-slate-900 border border-slate-700 rounded-lg p-8 shadow-2xl">
+        <div class="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500 mx-auto mb-4"></div>
+        <p class="text-white text-lg font-semibold text-center">Generating assets...</p>
+        <p class="text-slate-400 text-sm text-center mt-2">Creating images and audio for your video</p>
+      </div>
+    </div>
+  }
+
+  <!-- Rendering Overlay -->
+  @if (rendering()) {
+    <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div class="bg-slate-900 border border-slate-700 rounded-lg p-8 shadow-2xl min-w-80">
+        <div class="animate-spin rounded-full h-16 w-16 border-b-2 border-green-500 mx-auto mb-4"></div>
+        <p class="text-white text-lg font-semibold text-center">Rendering video...</p>
+        @if (renderProgress()) {
+          <p class="text-slate-400 text-sm text-center mt-2">{{ renderProgress()!.stage }}</p>
+          <div class="mt-4 h-2 bg-slate-700 rounded-full overflow-hidden">
+            <div
+              class="h-full bg-green-500 transition-all duration-300"
+              [style.width.%]="renderProgress()!.progress">
+            </div>
+          </div>
+          <p class="text-slate-500 text-xs text-center mt-2">{{ renderProgress()!.progress }}%</p>
+        } @else {
+          <p class="text-slate-400 text-sm text-center mt-2">Starting FFmpeg...</p>
+        }
+      </div>
+    </div>
+  }
+</div>

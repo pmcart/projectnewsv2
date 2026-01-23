@@ -4,6 +4,7 @@ import { AdminLayoutComponent } from './pages/admin-layout/admin-layout';
 import { BreakingNewsComponent } from './pages/breaking-news/breaking-news';
 import { RssFeedComponent } from './pages/news-feed/rss-feed';
 import { NewContentComponent } from './pages/new-content/new-content';
+import { NewVideoComponent } from './pages/new-video/new-video';
 import { ContentReviewComponent } from './pages/content-review/content-review';
 import { LiveStreamsComponent } from './pages/live-streams/live-streams';
 import { authGuard } from './guards/auth.guard';
@@ -49,6 +50,14 @@ export const routes: Routes = [
         data: {
           title: 'New Content',
           subtitle: 'Create new content from selected items.'
+        }
+      },
+      {
+        path: 'new-video',
+        component: NewVideoComponent,
+        data: {
+          title: 'New Video',
+          subtitle: 'Generate videos from news items.'
         }
       },
       {

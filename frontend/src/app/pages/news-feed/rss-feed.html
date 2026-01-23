@@ -7,8 +7,15 @@
       <div class="flex items-center gap-2">
         <app-new-content-button
           [itemId]="selectedItem()?.guid || null"
-          [itemType]="'rss-feed'">
+          [itemType]="'rss-feed'"
+          [itemData]="selectedItem()">
         </app-new-content-button>
+
+        <app-new-video-button
+          [itemId]="selectedItem()?.guid || null"
+          [itemType]="'rss-feed'"
+          [itemData]="selectedItem()">
+        </app-new-video-button>
 
         <button
           type="button"
@@ -123,149 +130,144 @@
     </div>
 
     <!-- list -->
-    <div *ngIf="!loading() && !error() && items().length > 0" class="space-y-3 mt-2">
+    <div *ngIf="!loading() && !error() && items().length > 0" class="space-y-2 mt-2">
       <article
         *ngFor="let item of items(); trackBy: trackByItem"
         (click)="selectItem(item)"
-        class="bg-slate-900/80 border border-slate-800 rounded-2xl p-3 cursor-pointer hover:border-sky-500 transition-colors"
+        [class.border-sky-500]="selectedItem() === item"
+        class="bg-slate-900/80 border border-slate-800 rounded-xl p-3 cursor-pointer hover:border-sky-400 transition-all"
       >
-        <header class="flex items-start justify-between gap-3 mb-1">
-          <div class="min-w-0">
-            <h3 class="text-xs font-semibold line-clamp-2">
-              {{ item.title || 'Untitled article' }}
-            </h3>
-
-            <div class="flex items-center gap-2 text-[11px] text-slate-400">
-              <img
-                *ngIf="item.favicon"
-                [src]="item.favicon"
-                alt=""
-                class="w-4 h-4 rounded"
-                loading="lazy"
-                referrerpolicy="no-referrer"
-              />
-              <span class="truncate">
-                {{ item.siteName || item.sourceName || getDisplayDomain(item) || 'Unknown source' }}
-              </span>
-            </div>
-          </div>
-
-          <span class="text-[10px] text-slate-500 whitespace-nowrap">
+        <div class="flex items-start justify-between gap-3 mb-1.5">
+          <h3 class="text-xs font-semibold line-clamp-2 leading-tight flex-1">
+            {{ item.title || 'Untitled article' }}
+          </h3>
+          <span class="text-[10px] text-slate-500 whitespace-nowrap flex-shrink-0">
             {{ getBestDate(item) | date: 'short' }}
           </span>
-        </header>
+        </div>
 
-        <p *ngIf="item.description" class="text-[11px] text-slate-300 line-clamp-3">
+        <p *ngIf="item.description" class="text-[11px] text-slate-400 line-clamp-2 mb-2 leading-relaxed">
           {{ item.description }}
         </p>
 
-        <div *ngIf="item.section" class="mt-2 text-[10px] text-slate-500">
-          Section: <span class="text-slate-300">{{ item.section }}</span>
+        <div class="flex items-center justify-between gap-2 text-[11px]">
+          <div class="flex items-center gap-1.5 text-slate-500 truncate">
+            <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/>
+            </svg>
+            <span class="truncate">
+              {{ item.siteName || item.sourceName || getDisplayDomain(item) || 'Unknown source' }}
+            </span>
+          </div>
+          <span *ngIf="item.section" class="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 whitespace-nowrap">
+            {{ item.section }}
+          </span>
         </div>
       </article>
     </div>
   </div>
 
   <!-- RIGHT -->
-  <div class="col-span-2 bg-slate-900/40 rounded-2xl p-4 border border-slate-800">
+  <div class="col-span-2 bg-slate-900/40 rounded-2xl p-6 border border-slate-800">
     <div
       *ngIf="!selectedItem() && !loading() && !error()"
-      class="text-xs text-slate-500 h-full flex items-center justify-center text-center"
+      class="text-sm text-slate-500 h-full flex items-center justify-center text-center"
     >
-      Select a headline on the left to see full details.
+      <div class="space-y-2">
+        <svg class="w-12 h-12 mx-auto text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/>
+        </svg>
+        <p>Select a headline to view details</p>
+      </div>
     </div>
 
     <ng-container *ngIf="selectedItem() as current">
-      <div class="flex items-start justify-between gap-4">
-        <div class="min-w-0">
-          <h2 class="text-lg font-semibold">{{ current.title }}</h2>
+      <div class="space-y-4">
+        <!-- Header -->
+        <div>
+          <h2 class="text-xl font-bold leading-tight text-slate-100">{{ current.title }}</h2>
 
-          <div class="mt-1 flex items-center gap-2 text-xs text-slate-400">
-            <img
-              *ngIf="current.favicon"
-              [src]="current.favicon"
-              alt=""
-              class="w-4 h-4 rounded"
-              loading="lazy"
-              referrerpolicy="no-referrer"
-            />
-            <span class="truncate">
+          <div class="mt-2 flex items-center gap-2 text-sm text-slate-400">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/>
+            </svg>
+            <span class="font-medium">
               {{ current.siteName || current.sourceName || getDisplayDomain(current) || 'Unknown source' }}
             </span>
             <span class="text-slate-600">•</span>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
             <span>{{ getBestDate(current) | date: 'medium' }}</span>
           </div>
+        </div>
 
-          <div class="mt-2 flex flex-wrap gap-2 text-[11px]">
+        <!-- Description -->
+        <p *ngIf="current.description" class="text-sm text-slate-300 leading-relaxed">
+          {{ current.description }}
+        </p>
+
+        <!-- Metadata -->
+        <div class="space-y-3 pt-3 border-t border-slate-800">
+          <!-- Section -->
+          <div *ngIf="current.section" class="flex items-center gap-2">
+            <span class="text-xs font-medium text-slate-500 uppercase tracking-wide">Section</span>
+            <span class="text-sm px-3 py-1 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
+              {{ current.section }}
+            </span>
+          </div>
+
+          <!-- Authors -->
+          <div *ngIf="current.authors?.length" class="flex items-start gap-2">
+            <span class="text-xs font-medium text-slate-500 uppercase tracking-wide pt-1">Authors</span>
+            <div class="flex flex-wrap gap-2">
+              <span *ngFor="let author of current.authors" class="text-sm text-slate-300">
+                {{ author }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Keywords -->
+          <div *ngIf="current.keywords?.length" class="flex items-start gap-2">
+            <span class="text-xs font-medium text-slate-500 uppercase tracking-wide pt-1">Keywords</span>
+            <div class="flex flex-wrap gap-1.5">
+              <span
+                *ngFor="let k of current.keywords"
+                class="text-[11px] px-2.5 py-1 rounded-full bg-slate-800/50 text-slate-400 border border-slate-700/50"
+              >
+                {{ k }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Links -->
+          <div class="flex flex-wrap gap-2 pt-2">
             <a
               *ngIf="getBestLink(current)"
               [href]="getBestLink(current)!"
               target="_blank"
               rel="noopener noreferrer"
-              class="underline text-sky-400 hover:text-sky-300"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-sky-600 hover:bg-sky-500 text-white transition-colors"
             >
-              Open article
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+              </svg>
+              Read Article
             </a>
 
             <a
-              *ngIf="current.resolvedLink && current.resolvedLink !== getBestLink(current)"
-              [href]="current.resolvedLink"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="underline text-slate-400 hover:text-slate-200"
-            >
-              Resolved
-            </a>
-
-            <a
-              *ngIf="current.link && current.link !== getBestLink(current)"
+              *ngIf="current.link"
               [href]="current.link"
               target="_blank"
               rel="noopener noreferrer"
-              class="underline text-slate-500 hover:text-slate-300"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-colors"
             >
-              Google link
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+              </svg>
+              Google News
             </a>
           </div>
-        </div>
-
-        <img
-          *ngIf="current.imageURL"
-          [src]="current.imageURL"
-          alt=""
-          class="w-40 h-24 object-cover rounded-xl border border-slate-800"
-          loading="lazy"
-          referrerpolicy="no-referrer"
-        />
-      </div>
-
-      <p *ngIf="current.description" class="mt-4 text-sm text-slate-200">
-        {{ current.description }}
-      </p>
-
-      <div class="mt-4 space-y-2 text-xs text-slate-300">
-        <div *ngIf="current.authors?.length">
-          <span class="text-slate-500">Authors:</span>
-          <!-- {{ current.authors.join(', ') }} -->
-        </div>
-
-        <div *ngIf="current.section">
-          <span class="text-slate-500">Section:</span>
-          {{ current.section }}
-        </div>
-
-        <div *ngIf="current.keywords?.length" class="flex flex-wrap gap-2">
-          <span class="text-slate-500 w-full">Keywords:</span>
-          <span
-            *ngFor="let k of current.keywords"
-            class="text-[11px] px-2 py-1 rounded-full bg-slate-800 border border-slate-700"
-          >
-            {{ k }}
-          </span>
-        </div>
-
-        <div *ngIf="current.canonicalLink" class="break-all text-slate-500">
-          Canonical: {{ current.canonicalLink }}
         </div>
       </div>
     </ng-container>

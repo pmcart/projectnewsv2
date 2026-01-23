@@ -3,34 +3,34 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 
 @Component({
-  selector: 'app-new-content-button',
+  selector: 'app-new-video-button',
   standalone: true,
   imports: [CommonModule],
   template: `
     <button
       type="button"
-      (click)="navigateToNewContent()"
+      (click)="navigateToNewVideo()"
       class="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium
-             bg-blue-600 hover:bg-blue-700 transition-colors"
+             bg-purple-600 hover:bg-purple-700 transition-colors"
     >
-      + New Content
+      + New Video
     </button>
   `
 })
-export class NewContentButtonComponent {
+export class NewVideoButtonComponent {
   @Input() itemId: string | null = null;
   @Input() itemType: 'breaking-news' | 'rss-feed' | null = null;
   @Input() itemData: any = null;
 
   constructor(private router: Router) {}
 
-  navigateToNewContent(): void {
+  navigateToNewVideo(): void {
     if (!this.itemId || !this.itemType) {
-      console.warn('NewContentButton: Missing itemId or itemType');
+      console.warn('NewVideoButton: Missing itemId or itemType');
       return;
     }
 
-    this.router.navigate(['/admin/new-content'], {
+    this.router.navigate(['/admin/new-video'], {
       queryParams: {
         id: this.itemId,
         type: this.itemType
