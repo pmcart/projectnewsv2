@@ -57,7 +57,7 @@
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
-              Generate Assets
+              {{ images().length > 0 ? 'Regenerate Assets' : 'Generate Assets' }}
             </button>
 
             @if (isRenderReady()) {
@@ -69,35 +69,38 @@
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                 </svg>
-                Render Video
+                {{ videoUrl() ? 'Re-render Video' : 'Render Video' }}
               </button>
             }
           </div>
         </div>
 
         <div class="flex-1 overflow-auto p-6">
-          @if (videoUrl()) {
-            <!-- Video Player -->
-            <div class="w-full max-w-4xl mx-auto">
-              <div class="aspect-video bg-black rounded-lg overflow-hidden shadow-2xl">
-                <video
-                  [src]="videoUrl()!"
-                  controls
-                  class="w-full h-full"
-                >
-                  Your browser does not support the video tag.
-                </video>
-              </div>
-              @if (thumbnailUrl()) {
-                <div class="mt-4">
-                  <p class="text-sm text-slate-400 mb-2">Thumbnail:</p>
-                  <img [src]="thumbnailUrl()!" alt="Video thumbnail" class="max-w-xs rounded-lg border border-slate-700">
+          @if (videoUrl() || images().length > 0 || assetStatus() !== 'PENDING') {
+            <div class="w-full max-w-5xl mx-auto">
+              <!-- Video Player (shown when video exists) -->
+              @if (videoUrl()) {
+                <div class="mb-6">
+                  <h3 class="text-white font-semibold mb-3">Rendered Video</h3>
+                  <div class="aspect-video bg-black rounded-lg overflow-hidden shadow-2xl">
+                    <video
+                      [src]="videoUrl()!"
+                      controls
+                      class="w-full h-full"
+                    >
+                      Your browser does not support the video tag.
+                    </video>
+                  </div>
+                  @if (thumbnailUrl()) {
+                    <div class="mt-4">
+                      <p class="text-sm text-slate-400 mb-2">Thumbnail:</p>
+                      <img [src]="thumbnailUrl()!" alt="Video thumbnail" class="max-w-xs rounded-lg border border-slate-700">
+                    </div>
+                  }
                 </div>
               }
-            </div>
-          } @else if (images().length > 0 || assetStatus() !== 'PENDING') {
-            <!-- Asset Generation Progress -->
-            <div class="w-full max-w-5xl mx-auto">
+
+              <!-- Asset Generation Progress -->
               <!-- Progress Header -->
               <div class="bg-slate-800/50 rounded-lg p-4 mb-6">
                 <div class="flex items-center justify-between mb-2">
@@ -172,6 +175,9 @@
               }
 
               <!-- Scene Cards Grid -->
+              @if (images().length > 0) {
+                <h3 class="text-white font-semibold mb-3">Generated Assets</h3>
+              }
               <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 @for (image of images(); track image.id) {
                   <div class="bg-slate-800/50 rounded-lg overflow-hidden border border-slate-700">

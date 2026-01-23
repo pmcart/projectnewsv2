@@ -1,6 +1,5 @@
 const { spawn } = require('child_process');
 const fs = require('fs').promises;
-const fsSync = require('fs');
 const path = require('path');
 const os = require('os');
 const prisma = require('../config/prisma');
@@ -81,21 +80,65 @@ class FFmpegRenderService {
 
   /**
    * Create a video clip from image + audio
-   * Simple approach: use audio as the duration source with -shortest
+   * Uses -shortest to match video duration to audio duration
+   * Adds visual effects (zoom, pan, ken burns) for variety
    */
-  async createSceneClip({ imagePath, audioPath, outputPath, aspectRatio = '16:9' }) {
+  async createSceneClip({ imagePath, audioPath, outputPath, aspectRatio = '16:9', effectType = 'zoomIn' }) {
     let width = 1920, height = 1080;
     if (aspectRatio === '9:16') { width = 1080; height = 1920; }
     else if (aspectRatio === '1:1') { width = 1080; height = 1080; }
+
+    // Settings for smooth Ken Burns effect
+    // Key: scale image UP first (4x), then zoompan works on high-res image for smooth results
+    const fps = 25;
+    const maxFrames = 1500; // 60 seconds at 25fps
+    const scaledWidth = width * 4;  // Scale up 4x for smooth zoompan
+    const scaledHeight = height * 4;
+
+    // Base zoompan settings - output at final resolution
+    const baseSettings = `:d=${maxFrames}:s=${width}x${height}:fps=${fps}`;
+
+    let zoompanFilter;
+    switch (effectType) {
+      case 'zoomIn':
+        // Zoom into center - accumulative zoom with zoom+0.001
+        zoompanFilter = `zoompan=z='min(zoom+0.0008,1.5)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)'${baseSettings}`;
+        break;
+      case 'zoomOut':
+        // Zoom out from center - start zoomed, decrease
+        zoompanFilter = `zoompan=z='if(eq(on,0),1.5,max(zoom-0.0008,1))':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)'${baseSettings}`;
+        break;
+      case 'panLeft':
+        // Pan from right to left with slight zoom
+        zoompanFilter = `zoompan=z='1.2':x='if(eq(on,0),iw/5,max(x-1,0))':y='ih/2-(ih/zoom/2)'${baseSettings}`;
+        break;
+      case 'panRight':
+        // Pan from left to right with slight zoom
+        zoompanFilter = `zoompan=z='1.2':x='if(eq(on,0),0,min(x+1,iw/5))':y='ih/2-(ih/zoom/2)'${baseSettings}`;
+        break;
+      case 'kenBurns':
+        // Classic Ken Burns: zoom in while panning
+        zoompanFilter = `zoompan=z='min(zoom+0.0006,1.4)':x='if(eq(on,0),0,min(x+0.5,iw/6))':y='ih/2-(ih/zoom/2)'${baseSettings}`;
+        break;
+      default:
+        // Default: gentle zoom to center
+        zoompanFilter = `zoompan=z='min(zoom+0.0006,1.4)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)'${baseSettings}`;
+    }
+
+    // Full filter: scale up first for smooth results, then apply zoompan
+    const filter = `scale=${scaledWidth}:${scaledHeight}:flags=lanczos,${zoompanFilter}`;
+
+    console.log(`Creating clip with effect: ${effectType}`);
 
     const args = [
       '-y',
       '-loop', '1',
       '-i', imagePath,
       '-i', audioPath,
-      '-vf', `scale=${width}:${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2:black,setsar=1`,
+      '-vf', filter,
       '-c:v', 'libx264',
-      '-tune', 'stillimage',
+      '-preset', 'medium',
+      '-crf', '23',
       '-c:a', 'aac',
       '-b:a', '192k',
       '-pix_fmt', 'yuv420p',
@@ -213,8 +256,12 @@ class FFmpegRenderService {
         await this.downloadFromS3(image.s3Key, imagePath);
         await this.downloadFromS3(audio.s3Key, audioPath);
 
-        console.log(`Creating clip for scene ${sceneNumber}...`);
-        await this.createSceneClip({ imagePath, audioPath, outputPath: clipPath, aspectRatio });
+        // Cycle through different effects for visual variety
+        const effects = ['zoomIn', 'panRight', 'zoomOut', 'panLeft', 'kenBurns'];
+        const effectType = effects[i % effects.length];
+
+        console.log(`Creating clip for scene ${sceneNumber} with effect: ${effectType}`);
+        await this.createSceneClip({ imagePath, audioPath, outputPath: clipPath, aspectRatio, effectType });
 
         // Verify the clip duration
         const clipDuration = await this.getAudioDuration(clipPath);

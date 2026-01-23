@@ -32,6 +32,9 @@ export class NewVideoComponent implements OnInit, OnDestroy {
   category = signal<string | null>(null);
   topic = signal<string | null>(null);
 
+  // Direct video ID (for loading existing videos)
+  videoId = signal<string | null>(null);
+
   // Source items
   breakingNewsItem = signal<BreakingNews | null>(null);
   rssFeedItem = signal<GoogleNewsItem | null>(null);
@@ -64,6 +67,12 @@ export class NewVideoComponent implements OnInit, OnDestroy {
 
   // Computed
   sourceText = computed(() => {
+    // First check if we have a loaded video with source text
+    const vid = this.video();
+    if (vid?.sourceText) {
+      return vid.sourceText;
+    }
+    // Otherwise check source items
     const bn = this.breakingNewsItem();
     const rss = this.rssFeedItem();
     if (bn) {
@@ -76,6 +85,11 @@ export class NewVideoComponent implements OnInit, OnDestroy {
   });
 
   sourceUrl = computed(() => {
+    // First check loaded video
+    const vid = this.video();
+    if (vid?.sourceUrl) {
+      return vid.sourceUrl;
+    }
     const rss = this.rssFeedItem();
     return rss?.link || undefined;
   });
@@ -99,7 +113,7 @@ export class NewVideoComponent implements OnInit, OnDestroy {
     const navigation = this.router.getCurrentNavigation();
     const stateData = navigation?.extras?.state?.['itemData'] || history.state?.['itemData'];
 
-    // Get route params and fetch source item
+    // Get route params and fetch source item or existing video
     this.route.queryParams
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(params => {
@@ -108,11 +122,16 @@ export class NewVideoComponent implements OnInit, OnDestroy {
         this.country.set(params['country'] || 'US');
         this.category.set(params['category'] || null);
         this.topic.set(params['topic'] || null);
+        this.videoId.set(params['videoId'] || null);
 
+        const videoId = this.videoId();
         const id = this.itemId();
         const type = this.itemType();
 
-        if (id && type) {
+        // If we have a videoId, load the existing video
+        if (videoId) {
+          this.loadExistingVideo(videoId);
+        } else if (id && type) {
           // If we have navigation state data, use it directly
           if (stateData && type === 'rss-feed') {
             this.rssFeedItem.set(stateData);
@@ -121,6 +140,40 @@ export class NewVideoComponent implements OnInit, OnDestroy {
             // Otherwise fetch from API
             this.fetchItem(id, type);
           }
+        }
+      });
+  }
+
+  private loadExistingVideo(videoId: string): void {
+    this.loading.set(true);
+    this.error.set(null);
+
+    this.videoService
+      .getVideoById(videoId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (video) => {
+          this.updateVideoState(video);
+          this.loading.set(false);
+
+          // If assets are still generating, start polling
+          if (video.assetStatus === AssetGenerationStatus.GENERATING ||
+              video.assetStatus === AssetGenerationStatus.PENDING) {
+            this.startPolling();
+          }
+
+          // If rendering is in progress, start polling
+          if (video.renderProgress?.stage &&
+              video.renderProgress.stage !== 'COMPLETED' &&
+              video.renderProgress.stage !== 'FAILED') {
+            this.rendering.set(true);
+            this.startPolling();
+          }
+        },
+        error: (err) => {
+          console.error('Failed to load video', err);
+          this.error.set('Failed to load video.');
+          this.loading.set(false);
         }
       });
   }
@@ -143,6 +196,13 @@ export class NewVideoComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (video) => {
           this.video.set(video);
+          // Update URL with videoId so page can be refreshed
+          this.router.navigate([], {
+            relativeTo: this.route,
+            queryParams: { videoId: video.id },
+            queryParamsHandling: 'merge',
+            replaceUrl: true
+          });
         },
         error: (err) => {
           console.error('Failed to create video', err);
@@ -245,6 +305,17 @@ export class NewVideoComponent implements OnInit, OnDestroy {
     if (lastRequest) {
       // Re-use the last generation request
       this.onGenerate(lastRequest);
+    } else {
+      // Fallback: build request from video's stored data
+      const vid = this.video();
+      if (vid) {
+        const request: VideoGenerationRequest = {
+          sourceText: vid.sourceText || this.sourceText(),
+          sourceUrl: vid.sourceUrl || this.sourceUrl(),
+          generationInputs: vid.generationInputs || {}
+        };
+        this.onGenerate(request);
+      }
     }
   }
 
@@ -293,6 +364,15 @@ export class NewVideoComponent implements OnInit, OnDestroy {
     // Update thumbnail URL from signed URL if available
     if (video.thumbnailSignedUrl) {
       this.thumbnailUrl.set(video.thumbnailSignedUrl);
+    }
+
+    // Restore lastGenerationRequest from video data (for page refresh scenarios)
+    if (!this.lastGenerationRequest() && video.generationInputs) {
+      this.lastGenerationRequest.set({
+        sourceText: video.sourceText || '',
+        sourceUrl: video.sourceUrl,
+        generationInputs: video.generationInputs
+      });
     }
   }
 
@@ -394,6 +474,12 @@ export class NewVideoComponent implements OnInit, OnDestroy {
 
   isRenderReady(): boolean {
     const status = this.assetStatus();
-    return (status === AssetGenerationStatus.COMPLETED || status === AssetGenerationStatus.PARTIAL) && !this.videoUrl();
+    // Allow rendering when assets are ready (even if video already exists - for re-rendering)
+    return status === AssetGenerationStatus.COMPLETED || status === AssetGenerationStatus.PARTIAL;
+  }
+
+  // Check if we can show the assets section
+  hasAssets(): boolean {
+    return this.images().length > 0 || this.assetStatus() !== AssetGenerationStatus.PENDING;
   }
 }
