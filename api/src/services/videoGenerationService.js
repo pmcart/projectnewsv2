@@ -46,9 +46,15 @@ Return a JSON object with the following structure:
 }
 
 SCENE GUIDELINES:
+- CRITICAL: The sum of all scene durations MUST equal the target duration specified
 - Each scene should be 3-8 seconds long
+- For shorter videos (15-30 seconds): use 3-5 scenes
+- For medium videos (60 seconds): use 6-10 scenes
+- For longer videos (90-180 seconds): use 10-20 scenes
 - imagePrompt should be detailed enough for DALL-E to generate relevant news imagery
-- narration should be concise and match the duration
+- narration length MUST match the scene duration (roughly 2-3 words per second)
+- A 5-second scene needs ~10-15 words of narration
+- A 10-second scene needs ~20-30 words of narration
 - Use transitions appropriately (fade for smooth, cut for urgency)
 - Apply effects sparingly to maintain professionalism`;
   }
@@ -130,6 +136,11 @@ SCENE GUIDELINES:
     }
     prompt += `\n`;
 
+    prompt += `IMPORTANT REMINDERS:\n`;
+    prompt += `- The total of all scene durations MUST add up to exactly ${duration} seconds\n`;
+    prompt += `- Each narration text length must match the scene duration (2-3 words per second)\n`;
+    prompt += `- Calculate: for a ${duration}-second video, you need scenes that sum to ${duration} seconds total\n\n`;
+
     prompt += `Generate the video plan now in JSON format:`;
 
     return prompt;
@@ -153,7 +164,7 @@ SCENE GUIDELINES:
 
     try {
       const completion = await openai.chat.completions.create({
-        model: generationInputs.model || 'gpt-4-turbo-preview',
+        model: generationInputs.model || 'gpt-4o',
         messages: [
           { role: 'system', content: systemMessage },
           { role: 'user', content: userPrompt }

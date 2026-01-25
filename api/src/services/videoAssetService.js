@@ -9,13 +9,28 @@ const openai = new OpenAI({
 class VideoAssetService {
   /**
    * Map generation inputs voice to OpenAI TTS voice
+   * OpenAI voices: alloy, echo, fable, onyx, nova, shimmer
+   * - alloy: neutral, balanced
+   * - echo: deeper male voice
+   * - fable: warm, British accent
+   * - onyx: deep, authoritative male
+   * - nova: warm, friendly female
+   * - shimmer: clear, professional female
    * @param {string} voiceInput - Voice from generationInputs
    * @returns {string} OpenAI voice name
    */
   mapVoiceToOpenAI(voiceInput) {
     const voiceMap = {
+      // Neutral voices
       neutral_male: 'alloy',
       neutral_female: 'nova',
+      // Authoritative voices
+      authoritative_male: 'onyx',
+      authoritative_female: 'shimmer',
+      // Friendly voices
+      friendly_male: 'fable',
+      friendly_female: 'nova',
+      // Legacy mappings (kept for backwards compatibility)
       professional_male: 'echo',
       professional_female: 'shimmer',
       calm_male: 'onyx',
@@ -443,50 +458,58 @@ class VideoAssetService {
     const imageResults = await Promise.all(imagePromises);
     results.images = imageResults.filter((img) => img !== null);
 
-    // Generate ALL audio in parallel
-    console.log(`Generating ${totalScenes} audio clips in parallel...`);
-    const audioPromises = scenes.map(async (scene) => {
-      try {
-        const audioRecord = await this.generateAndStoreAudio({
-          videoId,
-          scene,
-          voice: openaiVoice,
-        });
+    // Skip audio generation if voice is "none"
+    if (voiceInput === 'none') {
+      console.log('Voice set to "none", skipping audio generation');
+      // Mark all audio as completed (since we're intentionally skipping)
+      progress.audioCompleted = totalScenes;
+      await this.updateProgress(videoId, progress);
+    } else {
+      // Generate ALL audio in parallel
+      console.log(`Generating ${totalScenes} audio clips in parallel...`);
+      const audioPromises = scenes.map(async (scene) => {
+        try {
+          const audioRecord = await this.generateAndStoreAudio({
+            videoId,
+            scene,
+            voice: openaiVoice,
+          });
 
-        if (audioRecord) {
-          if (audioRecord.errorMessage) {
-            progress.audioFailed++;
-            results.errors.push({
-              scene: scene.sceneNumber,
-              type: 'audio',
-              error: audioRecord.errorMessage,
-            });
+          if (audioRecord) {
+            if (audioRecord.errorMessage) {
+              progress.audioFailed++;
+              results.errors.push({
+                scene: scene.sceneNumber,
+                type: 'audio',
+                error: audioRecord.errorMessage,
+              });
+            } else {
+              progress.audioCompleted++;
+            }
           } else {
+            // No narration for this scene, count as completed
             progress.audioCompleted++;
           }
-        } else {
-          // No narration for this scene, count as completed
-          progress.audioCompleted++;
+
+          // Update progress after each audio completes
+          await this.updateProgress(videoId, progress);
+          return audioRecord;
+        } catch (error) {
+          progress.audioFailed++;
+          results.errors.push({
+            scene: scene.sceneNumber,
+            type: 'audio',
+            error: error.message,
+          });
+          await this.updateProgress(videoId, progress);
+          return null;
         }
+      });
 
-        // Update progress after each audio completes
-        await this.updateProgress(videoId, progress);
-        return audioRecord;
-      } catch (error) {
-        progress.audioFailed++;
-        results.errors.push({
-          scene: scene.sceneNumber,
-          type: 'audio',
-          error: error.message,
-        });
-        await this.updateProgress(videoId, progress);
-        return null;
-      }
-    });
-
-    // Wait for all audio to complete
-    const audioResults = await Promise.all(audioPromises);
-    results.audio = audioResults.filter((aud) => aud !== null);
+      // Wait for all audio to complete
+      const audioResults = await Promise.all(audioPromises);
+      results.audio = audioResults.filter((aud) => aud !== null);
+    }
 
     // Determine final status
     let finalStatus = 'COMPLETED';
