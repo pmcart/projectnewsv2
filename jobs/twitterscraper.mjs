@@ -74,7 +74,7 @@ async function captureHomeLatestJSON(page, actionFn, { tailMs = 2500 } = {}) {
     try {
       const req = resp.request();
       const url = resp.url();
-      if (req.method() === 'POST' && isHomeLatestTimelineUrl(url)) {
+      if (isHomeLatestTimelineUrl(url)) {
         responses.push(resp);
       }
     } catch {}
