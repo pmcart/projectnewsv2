@@ -1,0 +1,325 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  READER
+  WRITER
+  EDITOR
+}
+
+enum DocumentType {
+  ARTICLE
+  PRESS_RELEASE
+  PRESS_BRIEFING
+  ANNOUNCEMENT
+  SOCIAL_THREAD
+  OTHER
+}
+
+enum DocumentStatus {
+  DRAFT
+  IN_REVIEW
+  APPROVED
+}
+
+enum SourceType {
+  TWEET
+  HEADLINE
+  URL
+  FREE_TEXT
+}
+
+enum ReviewEventType {
+  SUBMITTED
+  APPROVED
+  REJECTED
+  NOTE
+  INLINE_EDIT
+}
+
+enum AuditAction {
+  DOCUMENT_CREATED
+  GENERATED
+  SAVED
+  SUBMITTED_FOR_REVIEW
+  REVIEW_EDITED
+  APPROVED
+  REJECTED
+  RESTORED_VERSION
+}
+
+enum VideoStatus {
+  DRAFT
+  GENERATING
+  GENERATED
+  IN_REVIEW
+  APPROVED
+  REJECTED
+  FAILED
+}
+
+enum AssetGenerationStatus {
+  PENDING
+  GENERATING
+  COMPLETED
+  PARTIAL
+  FAILED
+}
+
+
+model Organization {
+  id        Int      @id @default(autoincrement())
+  name      String
+  slug      String   @unique
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  users     User[]
+
+  @@map("organizations")
+}
+
+model User {
+  id             Int           @id @default(autoincrement())
+  email          String        @unique
+  password       String        // Will store bcrypt hashed password
+  firstName      String
+  lastName       String
+  role           UserRole      @default(READER)
+  isActive       Boolean       @default(true)
+  organizationId Int?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  // Relations
+  organization   Organization?       @relation(fields: [organizationId], references: [id])
+  ownedDocuments Document[]          @relation("DocumentOwner")
+  createdVersions DocumentVersion[]  @relation("VersionCreator")
+  reviewEvents   ReviewEvent[]       @relation("ReviewActor")
+  auditLogs      AuditLog[]          @relation("AuditActor")
+  videos         Video[]             @relation("VideoOwner")
+  videoReviews   VideoReviewEvent[]  @relation("VideoReviewActor")
+
+  @@map("users")
+}
+
+model Document {
+  id               String           @id @default(uuid())
+  title            String
+  type             DocumentType
+  status           DocumentStatus   @default(DRAFT)
+  ownerUserId      Int
+  latestVersionId  String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  // Relations
+  owner            User             @relation("DocumentOwner", fields: [ownerUserId], references: [id])
+  versions         DocumentVersion[]
+  reviewEvents     ReviewEvent[]
+  auditLogs        AuditLog[]
+
+  @@map("documents")
+}
+
+model DocumentVersion {
+  id                String           @id @default(uuid())
+  documentId        String
+  versionNumber     Int
+  parentVersionId   String?
+  htmlContent       String           @db.Text
+  sourceType        SourceType
+  sourceText        String           @db.Text
+  sourceUrl         String?
+  generationInputs  Json?            // persona, tone, style, audience, format, constraints
+  llmMetadata       Json?            // model, temperature, tokens, requestId
+  createdByUserId   Int
+  createdAt         DateTime         @default(now())
+
+  // Relations
+  document          Document         @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  createdBy         User             @relation("VersionCreator", fields: [createdByUserId], references: [id])
+  parentVersion     DocumentVersion? @relation("VersionHistory", fields: [parentVersionId], references: [id])
+  childVersions     DocumentVersion[] @relation("VersionHistory")
+  reviewEvents      ReviewEvent[]
+
+  @@index([documentId, versionNumber(sort: Desc)])
+  @@index([documentId, createdAt(sort: Desc)])
+  @@map("document_versions")
+}
+
+model ReviewEvent {
+  id              String           @id @default(uuid())
+  documentId      String
+  versionId       String?
+  eventType       ReviewEventType
+  notes           String?          @db.Text
+  createdByUserId Int
+  createdAt       DateTime         @default(now())
+
+  // Relations
+  document        Document         @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  version         DocumentVersion? @relation(fields: [versionId], references: [id], onDelete: SetNull)
+  createdBy       User             @relation("ReviewActor", fields: [createdByUserId], references: [id])
+
+  @@map("review_events")
+}
+
+model AuditLog {
+  id              String           @id @default(uuid())
+  documentId      String?
+  versionId       String?
+  action          AuditAction
+  actorUserId     Int
+  metadata        Json?
+  createdAt       DateTime         @default(now())
+
+  // Relations
+  document        Document?        @relation(fields: [documentId], references: [id], onDelete: SetNull)
+  actor           User             @relation("AuditActor", fields: [actorUserId], references: [id])
+
+  @@index([documentId])
+  @@index([createdAt(sort: Desc)])
+  @@map("audit_logs")
+}
+
+model Video {
+  id                  String           @id @default(uuid())
+  title               String
+  status              VideoStatus      @default(DRAFT)
+  ownerUserId         Int
+
+  // Source information
+  sourceType          SourceType
+  sourceText          String           @db.Text
+  sourceUrl           String?
+
+  // Generation inputs (from the controls)
+  generationInputs    Json             // tone, style, duration, aspectRatio, voice, music, etc.
+
+  // OpenAI generated plan
+  videoPlan           Json?            // The structured plan from OpenAI: images, narration, effects
+
+  // LLM metadata
+  llmMetadata         Json?            // model, temperature, tokens, requestId
+
+  // Generated assets (populated after actual generation)
+  videoUrl            String?          // Final video file URL
+  videoS3Key          String?          // S3 key for the video file
+  thumbnailUrl        String?          // Thumbnail image URL
+  thumbnailS3Key      String?          // S3 key for the thumbnail
+  duration            Int?             // Actual duration in seconds
+
+  // Render progress tracking
+  renderProgress      Json?            // { stage: 'RENDERING_SCENES', currentScene: 3, totalScenes: 5, progress: 60 }
+
+  // Error tracking
+  errorMessage        String?          @db.Text
+
+  // Asset generation tracking
+  assetStatus         AssetGenerationStatus @default(PENDING)
+  assetProgress       Json?            // { totalScenes: 5, imagesCompleted: 3, audioCompleted: 2 }
+  assetError          String?          @db.Text
+
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+
+  // Relations
+  owner               User             @relation("VideoOwner", fields: [ownerUserId], references: [id])
+  reviewEvents        VideoReviewEvent[]
+  images              VideoImage[]     @relation("VideoImages")
+  audio               VideoAudio[]     @relation("VideoAudio")
+
+  @@index([ownerUserId])
+  @@index([status])
+  @@index([createdAt(sort: Desc)])
+  @@map("videos")
+}
+
+model VideoReviewEvent {
+  id              String           @id @default(uuid())
+  videoId         String
+  eventType       ReviewEventType  // Reusing existing enum: SUBMITTED, APPROVED, REJECTED, NOTE
+  notes           String?          @db.Text
+  createdByUserId Int
+  createdAt       DateTime         @default(now())
+
+  // Relations
+  video           Video            @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  createdBy       User             @relation("VideoReviewActor", fields: [createdByUserId], references: [id])
+
+  @@index([videoId])
+  @@index([createdAt(sort: Desc)])
+  @@map("video_review_events")
+}
+
+model VideoImage {
+  id              String           @id @default(uuid())
+  videoId         String
+  sceneNumber     Int              // Which scene this image belongs to
+  imagePrompt     String           @db.Text  // The prompt used to generate this image
+  s3Key           String           // S3 object key
+  s3Url           String           // Full S3 URL to access the image
+  width           Int?             // Image width in pixels
+  height          Int?             // Image height in pixels
+  fileSize        Int?             // File size in bytes
+  mimeType        String?          // e.g., image/png
+
+  // OpenAI metadata
+  openaiImageId   String?          // OpenAI's image ID if available
+  model           String?          // e.g., dall-e-3
+  revisedPrompt   String?          @db.Text  // OpenAI's revised prompt if available
+
+  // Error tracking
+  errorMessage    String?          @db.Text
+
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  // Relations
+  video           Video            @relation("VideoImages", fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@index([videoId])
+  @@index([sceneNumber])
+  @@map("video_images")
+}
+
+model VideoAudio {
+  id              String           @id @default(uuid())
+  videoId         String
+  sceneNumber     Int              // Which scene this audio belongs to
+  narrationText   String           @db.Text  // The text that was converted to speech
+  s3Key           String           // S3 object key
+  s3Url           String           // Full S3 URL to access the audio
+  duration        Float?           // Duration in seconds
+  fileSize        Int?             // File size in bytes
+  mimeType        String?          // e.g., audio/mpeg
+
+  // OpenAI metadata
+  voice           String?          // e.g., alloy, echo, fable, onyx, nova, shimmer
+  model           String?          // e.g., tts-1, tts-1-hd
+
+  // Error tracking
+  errorMessage    String?          @db.Text
+
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  // Relations
+  video           Video            @relation("VideoAudio", fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@index([videoId])
+  @@index([sceneNumber])
+  @@map("video_audio")
+}
