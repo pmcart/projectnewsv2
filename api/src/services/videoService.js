@@ -12,9 +12,10 @@ class VideoService {
    * @param {string} params.sourceText
    * @param {string} params.sourceUrl
    * @param {number} params.ownerUserId
+   * @param {number} params.organizationId - Organization the video belongs to
    * @returns {Promise<Object>} Created video
    */
-  async createVideo({ title, sourceType, sourceText, sourceUrl, ownerUserId }) {
+  async createVideo({ title, sourceType, sourceText, sourceUrl, ownerUserId, organizationId }) {
     const video = await prisma.video.create({
       data: {
         title,
@@ -22,6 +23,7 @@ class VideoService {
         sourceText,
         sourceUrl,
         ownerUserId,
+        organizationId,
         status: 'DRAFT',
         generationInputs: {}
       },
@@ -148,9 +150,10 @@ class VideoService {
   /**
    * Get video by ID
    * @param {string} id
+   * @param {number} [organizationId] - If provided, validates video belongs to this org
    * @returns {Promise<Object>} Video
    */
-  async getVideoById(id) {
+  async getVideoById(id, organizationId = null) {
     const video = await prisma.video.findUnique({
       where: { id },
       include: {
@@ -190,6 +193,11 @@ class VideoService {
       throw new Error('Video not found');
     }
 
+    // Validate organization access if organizationId is provided
+    if (organizationId !== null && video.organizationId !== organizationId) {
+      throw new Error('Access denied: Video belongs to a different organization');
+    }
+
     return video;
   }
 
@@ -200,10 +208,14 @@ class VideoService {
    * @param {number} params.userId
    * @param {number} params.currentUserId
    * @param {string} params.userRole
+   * @param {number} params.organizationId - User's organization ID (required for isolation)
    * @returns {Promise<Array>} List of videos
    */
-  async listVideos({ status, userId, currentUserId, userRole }) {
-    const where = {};
+  async listVideos({ status, userId, currentUserId, userRole, organizationId }) {
+    const where = {
+      // Always filter by organization for tenant isolation
+      organizationId
+    };
 
     // Filter by status
     if (status) {
@@ -217,7 +229,7 @@ class VideoService {
       // READERs and WRITERs see only their own videos
       where.ownerUserId = currentUserId;
     }
-    // EDITORs see all videos (no filter)
+    // EDITORs see all videos within their organization
 
     const videos = await prisma.video.findMany({
       where,
@@ -401,9 +413,13 @@ class VideoService {
   /**
    * Get review events for a video
    * @param {string} videoId
+   * @param {number} organizationId - User's organization ID for access validation
    * @returns {Promise<Array>} Review events
    */
-  async getReviewEvents(videoId) {
+  async getReviewEvents(videoId, organizationId) {
+    // First verify the video belongs to the user's organization
+    await this.getVideoById(videoId, organizationId);
+
     const events = await prisma.videoReviewEvent.findMany({
       where: { videoId },
       include: {
@@ -525,10 +541,11 @@ class VideoService {
   /**
    * Get video by ID with pre-signed URLs for assets
    * @param {string} id
+   * @param {number} [organizationId] - If provided, validates video belongs to this org
    * @returns {Promise<Object>} Video with signed URLs
    */
-  async getVideoByIdWithSignedUrls(id) {
-    const video = await this.getVideoById(id);
+  async getVideoByIdWithSignedUrls(id, organizationId = null) {
+    const video = await this.getVideoById(id, organizationId);
     return this.enrichWithSignedUrls(video);
   }
 }

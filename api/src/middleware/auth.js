@@ -73,4 +73,41 @@ function requireRole(...allowedRoles) {
 // Alias for convenience
 const requireAuth = jwtAuth;
 
-module.exports = { apiKeyAuth, jwtAuth, requireAuth, requireRole };
+/**
+ * Organization membership middleware
+ * Ensures the authenticated user belongs to an organization
+ * Use after jwtAuth middleware
+ */
+function requireOrganization(req, res, next) {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
+  if (!req.user.organizationId) {
+    return res.status(403).json({
+      error: 'Organization membership required',
+      message: 'You must belong to an organization to access this resource'
+    });
+  }
+
+  next();
+}
+
+/**
+ * Validates that a resource belongs to the user's organization
+ * @param {number} resourceOrgId - The organizationId of the resource
+ * @param {number} userOrgId - The user's organizationId
+ * @returns {boolean} True if resource belongs to user's org
+ */
+function belongsToOrganization(resourceOrgId, userOrgId) {
+  return resourceOrgId === userOrgId;
+}
+
+module.exports = {
+  apiKeyAuth,
+  jwtAuth,
+  requireAuth,
+  requireRole,
+  requireOrganization,
+  belongsToOrganization
+};

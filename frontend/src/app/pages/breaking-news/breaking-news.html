@@ -70,35 +70,11 @@
     <!-- Right: details -->
     <div class="lg:col-span-2 space-y-3">
       <!-- Enrichment -->
-      <div class="rounded-2xl border border-slate-800 bg-slate-900 p-3">
-        <div class="text-sm font-semibold mb-2">Enrichment</div>
-
-        <div *ngIf="enrichmentLoading()" class="text-xs text-slate-400">Loading enrichment…</div>
-        <div *ngIf="enrichmentError()" class="text-xs text-red-400">{{ enrichmentError() }}</div>
-
-        <div *ngIf="!enrichmentLoading() && enrichment() as e" class="text-xs text-slate-200 space-y-2">
-          <div *ngIf="e.category"><span class="text-slate-400">Category:</span> {{ e.category }}</div>
-          <div *ngIf="e.event_type"><span class="text-slate-400">Event type:</span> {{ e.event_type }}</div>
-          <div *ngIf="e.context"><span class="text-slate-400">Context:</span> {{ e.context }}</div>
-          <div *ngIf="e.credibility != null"><span class="text-slate-400">Credibility:</span> {{ e.credibility }}</div>
-          <div *ngIf="e.confidence != null"><span class="text-slate-400">Confidence:</span> {{ e.confidence }}</div>
-          <div *ngIf="e.risk_score != null"><span class="text-slate-400">Risk score:</span> {{ e.risk_score }}</div>
-
-          <div *ngIf="e.entities?.people?.length">
-            <span class="text-slate-400">People:</span> {{ e.entities?.people?.join(', ') }}
-          </div>
-          <div *ngIf="e.entities?.organizations?.length">
-            <span class="text-slate-400">Organizations:</span> {{ e.entities?.organizations?.join(', ') }}
-          </div>
-          <div *ngIf="e.entities?.equipment?.length">
-            <span class="text-slate-400">Equipment:</span> {{ e.entities?.equipment?.join(', ') }}
-          </div>
-        </div>
-
-        <div *ngIf="!enrichmentLoading() && !enrichment() && !enrichmentError()" class="text-xs text-slate-500">
-          No enrichment available.
-        </div>
-      </div>
+      <app-enrichment-view
+        [enrichment]="enrichment()"
+        [loading]="enrichmentLoading()"
+        [error]="enrichmentError()"
+      />
 
       <!-- Media -->
       <div class="rounded-2xl border border-slate-800 bg-slate-900 p-3">

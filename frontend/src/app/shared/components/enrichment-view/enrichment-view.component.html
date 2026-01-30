@@ -1,0 +1,523 @@
+<!-- src/app/shared/components/enrichment-view/enrichment-view.component.html -->
+<div class="rounded-2xl border border-slate-800 bg-slate-900 p-3">
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-3">
+    <div class="text-sm font-semibold">Intelligence Enrichment</div>
+    @if (enrichment()) {
+      <div class="flex items-center gap-2">
+        <!-- Model badge -->
+        @if (enrichment()!.model_used) {
+          <span class="px-2 py-1 rounded-full text-[11px] font-medium border {{ getModelBadgeColor(enrichment()!.model_used) }}">
+            {{ enrichment()!.model_used }}
+          </span>
+        }
+        <!-- Escalation indicator -->
+        @if (enrichment()!.needs_higher_model) {
+          <span class="px-2 py-1 rounded-full text-[11px] font-medium bg-yellow-600/20 text-yellow-400 border border-yellow-600/40">
+            ⚠️ Review
+          </span>
+        }
+      </div>
+    }
+  </div>
+
+  <!-- Loading State -->
+  @if (loading()) {
+    <div class="flex items-center gap-3 text-xs text-slate-400 py-8">
+      <span class="inline-block h-4 w-4 rounded-full border-2 border-slate-500 border-t-transparent animate-spin"></span>
+      <span>Loading enrichment…</span>
+    </div>
+  }
+
+  <!-- Error State -->
+  @if (error()) {
+    <div class="text-xs text-red-400 py-4">{{ error() }}</div>
+  }
+
+  <!-- Main Content -->
+  @if (!loading() && enrichment()) {
+    <!-- Tab Navigation -->
+    <nav class="flex gap-2 border-b border-slate-800 mb-3 overflow-x-auto">
+      @for (tab of tabs; track tab.id) {
+        <button
+          type="button"
+          (click)="switchTab(tab.id)"
+          class="px-3 py-2 text-xs font-medium transition-colors whitespace-nowrap"
+          [class.border-b-2]="isActiveTab(tab.id)"
+          [class.border-sky-500]="isActiveTab(tab.id)"
+          [class.text-white]="isActiveTab(tab.id)"
+          [class.text-slate-400]="!isActiveTab(tab.id)"
+          [class.hover:text-slate-200]="!isActiveTab(tab.id)"
+        >
+          {{ tab.label }}
+        </button>
+      }
+    </nav>
+
+    <!-- Tab Content -->
+    <div class="min-h-[300px]">
+
+      <!-- Overview Tab -->
+      @if (isActiveTab('overview')) {
+        <div class="space-y-4">
+          <!-- Category & Time Window Badges -->
+          <div class="flex flex-wrap gap-2">
+            @if (enrichment()!.category) {
+              <span class="px-3 py-1 rounded-full text-xs font-medium border {{ getCategoryColor(enrichment()!.category) }}">
+                {{ enrichment()!.category | uppercase }}
+              </span>
+            }
+            @if (enrichment()!.event_type) {
+              <span class="px-3 py-1 rounded-full text-xs font-medium bg-slate-700/40 text-slate-300 border border-slate-600">
+                {{ enrichment()!.event_type }}
+              </span>
+            }
+            @if (enrichment()!.time_window) {
+              <span class="px-3 py-1 rounded-full text-xs font-medium border {{ getTimeWindowColor(enrichment()!.time_window) }}">
+                {{ formatTimeWindow(enrichment()!.time_window) }}
+              </span>
+            }
+          </div>
+
+          <!-- Score Gauges -->
+          <div class="grid grid-cols-3 gap-3">
+            <!-- Confidence -->
+            <div class="text-center">
+              <div class="text-xs text-slate-400 mb-2">Confidence</div>
+              <div class="relative inline-flex items-center justify-center w-20 h-20">
+                <svg class="w-20 h-20 transform -rotate-90">
+                  <circle
+                    cx="40"
+                    cy="40"
+                    r="34"
+                    stroke="currentColor"
+                    stroke-width="6"
+                    fill="none"
+                    class="text-slate-700"
+                  />
+                  <circle
+                    cx="40"
+                    cy="40"
+                    r="34"
+                    stroke="currentColor"
+                    stroke-width="6"
+                    fill="none"
+                    class="gauge-circle {{ getScoreColor(enrichment()!.confidence) }}"
+                    [attr.stroke-dasharray]="213.63"
+                    [attr.stroke-dashoffset]="213.63 - (213.63 * (enrichment()!.confidence || 0))"
+                    stroke-linecap="round"
+                  />
+                </svg>
+                <div class="absolute text-sm font-semibold {{ getScoreColor(enrichment()!.confidence) }}">
+                  {{ getScorePercentage(enrichment()!.confidence) }}%
+                </div>
+              </div>
+            </div>
+
+            <!-- Credibility -->
+            <div class="text-center">
+              <div class="text-xs text-slate-400 mb-2">Credibility</div>
+              <div class="relative inline-flex items-center justify-center w-20 h-20">
+                <svg class="w-20 h-20 transform -rotate-90">
+                  <circle
+                    cx="40"
+                    cy="40"
+                    r="34"
+                    stroke="currentColor"
+                    stroke-width="6"
+                    fill="none"
+                    class="text-slate-700"
+                  />
+                  <circle
+                    cx="40"
+                    cy="40"
+                    r="34"
+                    stroke="currentColor"
+                    stroke-width="6"
+                    fill="none"
+                    class="gauge-circle {{ getScoreColor(enrichment()!.credibility) }}"
+                    [attr.stroke-dasharray]="213.63"
+                    [attr.stroke-dashoffset]="213.63 - (213.63 * (enrichment()!.credibility || 0))"
+                    stroke-linecap="round"
+                  />
+                </svg>
+                <div class="absolute text-sm font-semibold {{ getScoreColor(enrichment()!.credibility) }}">
+                  {{ getScorePercentage(enrichment()!.credibility) }}%
+                </div>
+              </div>
+            </div>
+
+            <!-- Risk Score -->
+            <div class="text-center">
+              <div class="text-xs text-slate-400 mb-2">Risk Score</div>
+              <div class="relative inline-flex items-center justify-center w-20 h-20">
+                <svg class="w-20 h-20 transform -rotate-90">
+                  <circle
+                    cx="40"
+                    cy="40"
+                    r="34"
+                    stroke="currentColor"
+                    stroke-width="6"
+                    fill="none"
+                    class="text-slate-700"
+                  />
+                  <circle
+                    cx="40"
+                    cy="40"
+                    r="34"
+                    stroke="currentColor"
+                    stroke-width="6"
+                    fill="none"
+                    class="gauge-circle {{ getScoreColor(enrichment()!.risk_score) }}"
+                    [attr.stroke-dasharray]="213.63"
+                    [attr.stroke-dashoffset]="213.63 - (213.63 * (enrichment()!.risk_score || 0))"
+                    stroke-linecap="round"
+                  />
+                </svg>
+                <div class="absolute text-sm font-semibold {{ getScoreColor(enrichment()!.risk_score) }}">
+                  {{ getScorePercentage(enrichment()!.risk_score) }}%
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sentiment Meter -->
+          @if (enrichment()!.sentiment != null) {
+            <div>
+              <div class="text-xs text-slate-400 mb-2">Sentiment</div>
+              <div class="relative h-6 sentiment-bar rounded-full overflow-hidden">
+                <div
+                  class="absolute top-0 bottom-0 w-1 bg-white shadow-lg transition-all"
+                  [style.left.%]="getSentimentPosition(enrichment()!.sentiment)"
+                ></div>
+              </div>
+              <div class="flex justify-between text-[11px] text-slate-500 mt-1">
+                <span>Negative</span>
+                <span>Neutral</span>
+                <span>Positive</span>
+              </div>
+            </div>
+          }
+
+          <!-- Context -->
+          @if (enrichment()!.context) {
+            <div class="rounded-xl bg-slate-800/50 p-3">
+              <div class="text-xs text-slate-400 mb-1">Context</div>
+              <div class="text-xs text-slate-200 leading-relaxed">{{ enrichment()!.context }}</div>
+            </div>
+          }
+        </div>
+      }
+
+      <!-- Intelligence Tab -->
+      @if (isActiveTab('intelligence')) {
+        <div class="space-y-4">
+          <!-- Future Scenarios -->
+          @if (enrichment()!.future_scenarios && enrichment()!.future_scenarios!.length > 0) {
+            <div>
+              <div class="text-xs text-slate-400 mb-2 font-medium">Future Scenarios ({{ enrichment()!.future_scenarios!.length }})</div>
+              <div class="space-y-2">
+                @for (scenario of sortByLikelihood(enrichment()!.future_scenarios); track $index) {
+                  <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-3">
+                    <div class="text-xs text-slate-200 mb-2">{{ scenario.scenario }}</div>
+                    <div class="flex items-center gap-2">
+                      <div class="flex-1 h-2 bg-slate-700 rounded-full overflow-hidden">
+                        <div
+                          class="h-full {{ getLikelihoodColor(scenario.likelihood) }} transition-all"
+                          [style.width.%]="(scenario.likelihood || 0) * 100"
+                        ></div>
+                      </div>
+                      <div class="text-xs font-medium {{ getScoreColor(scenario.likelihood) }}">
+                        {{ getScorePercentage(scenario.likelihood) }}%
+                      </div>
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+          } @else {
+            <div class="text-xs text-slate-500 py-8 text-center">No future scenarios available</div>
+          }
+
+          <!-- Knock-On Effects -->
+          @if (enrichment()!.knock_on_effects && enrichment()!.knock_on_effects!.length > 0) {
+            <div>
+              <div class="text-xs text-slate-400 mb-2 font-medium">Knock-On Effects ({{ enrichment()!.knock_on_effects!.length }})</div>
+              <div class="space-y-2">
+                @for (effect of sortByLikelihood(enrichment()!.knock_on_effects); track $index) {
+                  <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-3">
+                    <div class="text-xs text-slate-200 mb-2">{{ effect.effect }}</div>
+                    <div class="flex items-center gap-2">
+                      <div class="flex-1 h-2 bg-slate-700 rounded-full overflow-hidden">
+                        <div
+                          class="h-full {{ getLikelihoodColor(effect.likelihood) }} transition-all"
+                          [style.width.%]="(effect.likelihood || 0) * 100"
+                        ></div>
+                      </div>
+                      <div class="text-xs font-medium {{ getScoreColor(effect.likelihood) }}">
+                        {{ getScorePercentage(effect.likelihood) }}%
+                      </div>
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      }
+
+      <!-- Entities & Locations Tab -->
+      @if (isActiveTab('entities')) {
+        <div class="space-y-4">
+          <!-- People -->
+          @if (enrichment()!.entities?.people && enrichment()!.entities!.people!.length > 0) {
+            <div>
+              <div class="text-xs text-slate-400 mb-2 font-medium">People ({{ enrichment()!.entities!.people!.length }})</div>
+              <div class="flex flex-wrap gap-2">
+                @for (person of enrichment()!.entities!.people; track person) {
+                  <button
+                    type="button"
+                    (click)="copyToClipboard(person)"
+                    class="px-3 py-1 rounded-full text-xs font-medium bg-blue-600/20 text-blue-400 border border-blue-600/40 hover:bg-blue-600/30 transition-colors cursor-pointer"
+                    title="Click to copy"
+                  >
+                    {{ person }}
+                  </button>
+                }
+              </div>
+            </div>
+          }
+
+          <!-- Organizations -->
+          @if (enrichment()!.entities?.organizations && enrichment()!.entities!.organizations!.length > 0) {
+            <div>
+              <div class="text-xs text-slate-400 mb-2 font-medium">Organizations ({{ enrichment()!.entities!.organizations!.length }})</div>
+              <div class="flex flex-wrap gap-2">
+                @for (org of enrichment()!.entities!.organizations; track org) {
+                  <button
+                    type="button"
+                    (click)="copyToClipboard(org)"
+                    class="px-3 py-1 rounded-full text-xs font-medium bg-purple-600/20 text-purple-400 border border-purple-600/40 hover:bg-purple-600/30 transition-colors cursor-pointer"
+                    title="Click to copy"
+                  >
+                    {{ org }}
+                  </button>
+                }
+              </div>
+            </div>
+          }
+
+          <!-- Equipment -->
+          @if (enrichment()!.entities?.equipment && enrichment()!.entities!.equipment!.length > 0) {
+            <div>
+              <div class="text-xs text-slate-400 mb-2 font-medium">Equipment ({{ enrichment()!.entities!.equipment!.length }})</div>
+              <div class="flex flex-wrap gap-2">
+                @for (item of enrichment()!.entities!.equipment; track item) {
+                  <button
+                    type="button"
+                    (click)="copyToClipboard(item)"
+                    class="px-3 py-1 rounded-full text-xs font-medium bg-orange-600/20 text-orange-400 border border-orange-600/40 hover:bg-orange-600/30 transition-colors cursor-pointer"
+                    title="Click to copy"
+                  >
+                    {{ item }}
+                  </button>
+                }
+              </div>
+            </div>
+          }
+
+          <!-- No Entities Message -->
+          @if ((!enrichment()!.entities?.people || enrichment()!.entities!.people!.length === 0) &&
+               (!enrichment()!.entities?.organizations || enrichment()!.entities!.organizations!.length === 0) &&
+               (!enrichment()!.entities?.equipment || enrichment()!.entities!.equipment!.length === 0)) {
+            <div class="text-xs text-slate-500 py-4 text-center">No entities extracted</div>
+          }
+
+          <!-- Locations -->
+          @if (enrichment()!.locations && enrichment()!.locations!.length > 0) {
+            <div>
+              <div class="text-xs text-slate-400 mb-2 font-medium">Locations ({{ enrichment()!.locations!.length }})</div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                @for (location of enrichment()!.locations; track $index) {
+                  <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-3">
+                    <div class="text-xs text-slate-200 font-medium mb-1">
+                      {{ location.place || 'Unknown location' }}
+                    </div>
+                    @if (location.country) {
+                      <div class="text-xs text-slate-400 mb-2">{{ location.country }}</div>
+                    }
+                    @if (location.lat != null && location.lon != null) {
+                      <div class="text-[11px] text-slate-500 mb-2">
+                        {{ location.lat }}, {{ location.lon }}
+                      </div>
+                      <button
+                        type="button"
+                        (click)="openExternal('https://www.openstreetmap.org/?mlat=' + location.lat + '&mlon=' + location.lon + '&zoom=10')"
+                        class="text-[11px] text-sky-400 hover:text-sky-300 hover:underline"
+                      >
+                        View on map →
+                      </button>
+                    }
+                  </div>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      }
+
+      <!-- Sources Tab -->
+      @if (isActiveTab('sources')) {
+        <div class="space-y-4">
+          <!-- Sources to Verify -->
+          @if (enrichment()!.sources_to_verify && enrichment()!.sources_to_verify!.length > 0) {
+            <div>
+              <div class="text-xs text-slate-400 mb-2 font-medium">Sources to Verify ({{ enrichment()!.sources_to_verify!.length }})</div>
+              <div class="space-y-2">
+                @for (source of enrichment()!.sources_to_verify; track $index) {
+                  <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-3 flex items-start justify-between gap-2">
+                    <div class="text-xs text-slate-200 flex-1">
+                      🔍 {{ source }}
+                    </div>
+                    <button
+                      type="button"
+                      (click)="openExternal('https://www.google.com/search?q=' + encodeURIComponent(source))"
+                      class="text-[11px] text-sky-400 hover:text-sky-300 hover:underline whitespace-nowrap"
+                    >
+                      Search →
+                    </button>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+
+          <!-- Additional Links -->
+          @if (enrichment()!.additional_links && enrichment()!.additional_links!.length > 0) {
+            <div>
+              <div class="text-xs text-slate-400 mb-2 font-medium">Additional News Links ({{ enrichment()!.additional_links!.length }})</div>
+              <div class="space-y-2 max-h-[400px] overflow-y-auto">
+                @for (link of enrichment()!.additional_links; track $index) {
+                  <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-3">
+                    @if (link.text) {
+                      <div class="text-xs text-slate-200 mb-1">{{ link.text }}</div>
+                    }
+                    <button
+                      type="button"
+                      (click)="openExternal(link.link)"
+                      class="text-[11px] text-sky-400 hover:text-sky-300 hover:underline break-all"
+                    >
+                      {{ extractDomain(link.link) }}
+                    </button>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+
+          <!-- No Sources Message -->
+          @if ((!enrichment()!.sources_to_verify || enrichment()!.sources_to_verify!.length === 0) &&
+               (!enrichment()!.additional_links || enrichment()!.additional_links!.length === 0)) {
+            <div class="text-xs text-slate-500 py-8 text-center">No sources or additional links available</div>
+          }
+        </div>
+      }
+
+      <!-- Metadata Tab -->
+      @if (isActiveTab('metadata')) {
+        <div class="space-y-4">
+          <!-- Model Details -->
+          <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-3">
+            <div class="text-xs text-slate-400 mb-2 font-medium">Model Details</div>
+            <div class="space-y-2 text-xs">
+              <div class="flex justify-between">
+                <span class="text-slate-400">Model:</span>
+                <span class="text-slate-200 font-medium">{{ enrichment()!.model_used || 'N/A' }}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-400">Flagged for review:</span>
+                <span class="font-medium" [class.text-yellow-400]="enrichment()!.needs_higher_model" [class.text-green-400]="!enrichment()!.needs_higher_model">
+                  {{ enrichment()!.needs_higher_model ? '⚠️ Yes' : '✓ No' }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Timestamps -->
+          <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-3">
+            <div class="text-xs text-slate-400 mb-2 font-medium">Timestamps</div>
+            <div class="space-y-2 text-xs">
+              @if (enrichment()!.tweet_datetime) {
+                <div class="flex justify-between">
+                  <span class="text-slate-400">Original Tweet:</span>
+                  <span class="text-slate-200">{{ enrichment()!.tweet_datetime | date:'medium' }}</span>
+                </div>
+              }
+              @if (enrichment()!.updatedAt) {
+                <div class="flex justify-between">
+                  <span class="text-slate-400">Enriched:</span>
+                  <span class="text-slate-200">{{ enrichment()!.updatedAt | date:'medium' }}</span>
+                </div>
+              }
+            </div>
+          </div>
+
+          <!-- Hash -->
+          @if (enrichment()!.hash) {
+            <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-3">
+              <div class="text-xs text-slate-400 mb-2 font-medium">Deduplication Hash</div>
+              <div class="text-xs text-slate-200 font-mono">{{ formatHash(enrichment()!.hash) }}</div>
+            </div>
+          }
+
+          <!-- Account & Tweet URL -->
+          @if (enrichment()!.account || enrichment()!.tweet_url) {
+            <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-3">
+              <div class="text-xs text-slate-400 mb-2 font-medium">Source</div>
+              <div class="space-y-2 text-xs">
+                @if (enrichment()!.account) {
+                  <div class="flex justify-between">
+                    <span class="text-slate-400">Account:</span>
+                    <span class="text-slate-200">{{ enrichment()!.account }}</span>
+                  </div>
+                }
+                @if (enrichment()!.tweet_url) {
+                  <div>
+                    <button
+                      type="button"
+                      (click)="openExternal(enrichment()!.tweet_url!)"
+                      class="text-sky-400 hover:text-sky-300 hover:underline break-all text-left"
+                    >
+                      View original tweet →
+                    </button>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+
+          <!-- Notes -->
+          @if (enrichment()!.notes) {
+            <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-3">
+              <div class="text-xs text-slate-400 mb-2 font-medium">Notes</div>
+              <div class="text-xs text-slate-200">{{ enrichment()!.notes }}</div>
+            </div>
+          }
+        </div>
+      }
+
+    </div>
+  }
+
+  <!-- No Enrichment Message -->
+  @if (!loading() && !enrichment() && !error()) {
+    <div class="text-xs text-slate-500 py-8 text-center">No enrichment available</div>
+  }
+</div>
+
+<!-- Toast Notification -->
+@if (toastMessage()) {
+  <div class="fixed bottom-4 right-4 z-50 px-4 py-2 rounded-lg bg-emerald-600 text-white text-xs font-medium shadow-lg animate-fade-in">
+    {{ toastMessage() }}
+  </div>
+}

@@ -86,6 +86,8 @@ model Organization {
 
   // Relations
   users     User[]
+  documents Document[]
+  videos    Video[]
 
   @@map("organizations")
 }
@@ -120,16 +122,19 @@ model Document {
   type             DocumentType
   status           DocumentStatus   @default(DRAFT)
   ownerUserId      Int
+  organizationId   Int
   latestVersionId  String?
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 
   // Relations
   owner            User             @relation("DocumentOwner", fields: [ownerUserId], references: [id])
+  organization     Organization     @relation(fields: [organizationId], references: [id])
   versions         DocumentVersion[]
   reviewEvents     ReviewEvent[]
   auditLogs        AuditLog[]
 
+  @@index([organizationId])
   @@map("documents")
 }
 
@@ -199,6 +204,7 @@ model Video {
   title               String
   status              VideoStatus      @default(DRAFT)
   ownerUserId         Int
+  organizationId      Int
 
   // Source information
   sourceType          SourceType
@@ -237,11 +243,13 @@ model Video {
 
   // Relations
   owner               User             @relation("VideoOwner", fields: [ownerUserId], references: [id])
+  organization        Organization     @relation(fields: [organizationId], references: [id])
   reviewEvents        VideoReviewEvent[]
   images              VideoImage[]     @relation("VideoImages")
   audio               VideoAudio[]     @relation("VideoAudio")
 
   @@index([ownerUserId])
+  @@index([organizationId])
   @@index([status])
   @@index([createdAt(sort: Desc)])
   @@map("videos")

@@ -11,12 +11,14 @@ class VideoController {
       const { status, userId } = req.query;
       const currentUserId = req.user.userId;
       const userRole = req.user.role;
+      const organizationId = req.user.organizationId;
 
       const videos = await videoService.listVideos({
         status,
         userId,
         currentUserId,
-        userRole
+        userRole,
+        organizationId
       });
 
       res.json(videos);
@@ -33,6 +35,7 @@ class VideoController {
     try {
       const { title, sourceType, sourceText, sourceUrl } = req.body;
       const ownerUserId = req.user.userId;
+      const organizationId = req.user.organizationId;
 
       if (!title) {
         return res.status(400).json({
@@ -52,6 +55,7 @@ class VideoController {
         sourceText,
         sourceUrl,
         ownerUserId,
+        organizationId,
       });
 
       res.status(201).json(video);
@@ -67,16 +71,10 @@ class VideoController {
   async getVideo(req, res, next) {
     try {
       const { id } = req.params;
+      const organizationId = req.user.organizationId;
 
-      // Get video with pre-signed URLs for assets
-      const video = await videoService.getVideoByIdWithSignedUrls(id);
-
-      // Check permissions (similar to documents)
-      const userRole = req.user.role;
-      const isOwner = video.ownerUserId === req.user.userId;
-
-      // For now, allow all authenticated users to view
-      // In production, you might want stricter controls
+      // Get video with pre-signed URLs for assets (validates org access)
+      const video = await videoService.getVideoByIdWithSignedUrls(id, organizationId);
 
       res.json(video);
     } catch (error) {
@@ -98,6 +96,7 @@ class VideoController {
         generationInputs
       } = req.body;
       const userId = req.user.userId;
+      const organizationId = req.user.organizationId;
 
       if (!sourceType || !sourceText) {
         return res.status(400).json({
@@ -111,8 +110,8 @@ class VideoController {
         });
       }
 
-      // Check permissions
-      const video = await videoService.getVideoById(id);
+      // Check permissions (validates org access)
+      const video = await videoService.getVideoById(id, organizationId);
       const userRole = req.user.role;
       const isOwner = video.ownerUserId === userId;
 
@@ -154,9 +153,10 @@ class VideoController {
     try {
       const { id } = req.params;
       const userId = req.user.userId;
+      const organizationId = req.user.organizationId;
 
-      // Check ownership or permissions
-      const video = await videoService.getVideoById(id);
+      // Check ownership or permissions (validates org access)
+      const video = await videoService.getVideoById(id, organizationId);
       const isOwner = video.ownerUserId === userId;
 
       if (!isOwner && req.user.role === 'READER') {
@@ -181,6 +181,7 @@ class VideoController {
     try {
       const { id } = req.params;
       const userId = req.user.userId;
+      const organizationId = req.user.organizationId;
       const { notes } = req.body;
 
       // Only EDITOR or WRITER can approve
@@ -189,6 +190,9 @@ class VideoController {
           error: 'Only editors can approve videos',
         });
       }
+
+      // Validate org access first
+      await videoService.getVideoById(id, organizationId);
 
       const updatedVideo = await videoService.approveVideo(id, userId, notes);
 
@@ -206,6 +210,7 @@ class VideoController {
     try {
       const { id } = req.params;
       const userId = req.user.userId;
+      const organizationId = req.user.organizationId;
       const { notes } = req.body;
 
       // Only EDITOR or WRITER can reject
@@ -220,6 +225,9 @@ class VideoController {
           error: 'Rejection notes must be at least 10 characters',
         });
       }
+
+      // Validate org access first
+      await videoService.getVideoById(id, organizationId);
 
       const updatedVideo = await videoService.rejectVideo({
         videoId: id,
@@ -241,6 +249,7 @@ class VideoController {
     try {
       const { id } = req.params;
       const userId = req.user.userId;
+      const organizationId = req.user.organizationId;
       const { notes } = req.body;
 
       // Only EDITOR or WRITER can add review notes
@@ -249,6 +258,9 @@ class VideoController {
           error: 'Only editors can add review notes',
         });
       }
+
+      // Validate org access first
+      await videoService.getVideoById(id, organizationId);
 
       const reviewEvent = await videoService.addReviewNote({
         videoId: id,
@@ -269,7 +281,9 @@ class VideoController {
   async getReviewEvents(req, res, next) {
     try {
       const { id } = req.params;
-      const events = await videoService.getReviewEvents(id);
+      const organizationId = req.user.organizationId;
+
+      const events = await videoService.getReviewEvents(id, organizationId);
 
       res.json(events);
     } catch (error) {
@@ -286,9 +300,10 @@ class VideoController {
       const { id } = req.params;
       const { videoUrl, thumbnailUrl, duration } = req.body;
       const userId = req.user.userId;
+      const organizationId = req.user.organizationId;
 
-      // Check permissions
-      const video = await videoService.getVideoById(id);
+      // Check permissions (validates org access)
+      const video = await videoService.getVideoById(id, organizationId);
       const isOwner = video.ownerUserId === userId;
 
       if (!isOwner && req.user.role !== 'EDITOR') {
@@ -318,9 +333,10 @@ class VideoController {
     try {
       const { id } = req.params;
       const userId = req.user.userId;
+      const organizationId = req.user.organizationId;
 
-      // Check permissions
-      const video = await videoService.getVideoById(id);
+      // Check permissions (validates org access)
+      const video = await videoService.getVideoById(id, organizationId);
       const isOwner = video.ownerUserId === userId;
 
       if (!isOwner && req.user.role !== 'EDITOR') {
@@ -343,8 +359,8 @@ class VideoController {
         console.error(`Video ${id} render failed:`, error);
       });
 
-      // Return immediately with updated status
-      const updatedVideo = await videoService.getVideoByIdWithSignedUrls(id);
+      // Return immediately with updated status (pass org context)
+      const updatedVideo = await videoService.getVideoByIdWithSignedUrls(id, organizationId);
 
       res.json({
         message: 'Video rendering started',

@@ -1,10 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const documentController = require('../controllers/documentController');
-const { requireAuth } = require('../middleware/auth');
+const { requireAuth, requireOrganization } = require('../middleware/auth');
 
-// All routes require authentication
+// All routes require authentication and organization membership
 router.use(requireAuth);
+router.use(requireOrganization);
 
 // Document CRUD
 router.get('/', documentController.listDocuments);

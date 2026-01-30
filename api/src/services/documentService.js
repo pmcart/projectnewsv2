@@ -9,10 +9,14 @@ class DocumentService {
    * @param {number} [filters.userId] - Filter by owner
    * @param {number} filters.currentUserId - Current user ID
    * @param {string} filters.userRole - Current user role
+   * @param {number} filters.organizationId - User's organization ID (required for isolation)
    * @returns {Promise<Array>}
    */
-  async listDocuments({ status, userId, currentUserId, userRole }) {
-    const where = {};
+  async listDocuments({ status, userId, currentUserId, userRole, organizationId }) {
+    const where = {
+      // Always filter by organization for tenant isolation
+      organizationId
+    };
 
     // Apply status filter
     if (status) {
@@ -89,14 +93,16 @@ class DocumentService {
    * @param {string} data.title
    * @param {string} data.type - DocumentType enum
    * @param {number} data.ownerUserId
+   * @param {number} data.organizationId - Organization the document belongs to
    * @returns {Promise<Object>} Document with initial empty version
    */
-  async createDocument({ title, type, ownerUserId }) {
+  async createDocument({ title, type, ownerUserId, organizationId }) {
     const document = await prisma.document.create({
       data: {
         title,
         type,
         ownerUserId,
+        organizationId,
         status: 'DRAFT',
       },
       include: {
@@ -128,9 +134,10 @@ class DocumentService {
   /**
    * Get document by ID with latest version
    * @param {string} documentId
+   * @param {number} [organizationId] - If provided, validates document belongs to this org
    * @returns {Promise<Object>}
    */
-  async getDocumentById(documentId) {
+  async getDocumentById(documentId, organizationId = null) {
     const document = await prisma.document.findUnique({
       where: { id: documentId },
       include: {
@@ -163,6 +170,11 @@ class DocumentService {
       throw new Error('Document not found');
     }
 
+    // Validate organization access if organizationId is provided
+    if (organizationId !== null && document.organizationId !== organizationId) {
+      throw new Error('Access denied: Document belongs to a different organization');
+    }
+
     return {
       ...document,
       latestVersion: document.versions[0] || null,
@@ -173,9 +185,13 @@ class DocumentService {
   /**
    * Get all versions of a document
    * @param {string} documentId
+   * @param {number} organizationId - User's organization ID for access validation
    * @returns {Promise<Array>}
    */
-  async getDocumentVersions(documentId) {
+  async getDocumentVersions(documentId, organizationId) {
+    // First verify the document belongs to the user's organization
+    await this.getDocumentById(documentId, organizationId);
+
     const versions = await prisma.documentVersion.findMany({
       where: { documentId },
       orderBy: { versionNumber: 'desc' },
@@ -650,9 +666,13 @@ class DocumentService {
   /**
    * Get review events for a document
    * @param {string} documentId
+   * @param {number} organizationId - User's organization ID for access validation
    * @returns {Promise<Array>}
    */
-  async getReviewEvents(documentId) {
+  async getReviewEvents(documentId, organizationId) {
+    // First verify the document belongs to the user's organization
+    await this.getDocumentById(documentId, organizationId);
+
     const events = await prisma.reviewEvent.findMany({
       where: { documentId },
       orderBy: { createdAt: 'desc' },
@@ -673,9 +693,13 @@ class DocumentService {
   /**
    * Get audit log for a document
    * @param {string} documentId
+   * @param {number} organizationId - User's organization ID for access validation
    * @returns {Promise<Array>}
    */
-  async getAuditLog(documentId) {
+  async getAuditLog(documentId, organizationId) {
+    // First verify the document belongs to the user's organization
+    await this.getDocumentById(documentId, organizationId);
+
     const logs = await prisma.auditLog.findMany({
       where: { documentId },
       orderBy: { createdAt: 'desc' },

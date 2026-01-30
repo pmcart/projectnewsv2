@@ -1,10 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const videoController = require('../controllers/videoController');
-const { requireAuth } = require('../middleware/auth');
+const { requireAuth, requireOrganization } = require('../middleware/auth');
 
-// All routes require authentication
+// All routes require authentication and organization membership
 router.use(requireAuth);
+router.use(requireOrganization);
 
 // List videos
 router.get('/', videoController.listVideos.bind(videoController));

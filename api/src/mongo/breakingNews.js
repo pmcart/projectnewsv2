@@ -7,7 +7,7 @@ const BreakingNewsLive = require('../models/BreakingNewsLive');
 class BreakingNewsRepo {
   async getAll({ limit = 50, offset = 0 } = {}) {
     return BreakingNews.find()
-      .sort({ publishedAt: -1 })
+      .sort({ createdAt: -1 })
       .skip(offset)
       .limit(limit)
       .lean()

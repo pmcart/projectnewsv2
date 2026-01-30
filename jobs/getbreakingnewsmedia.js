@@ -24,7 +24,6 @@ const PRIMARY_VIDEO_DOMAINS = [
   'youtube.com',
   'youtu.be',
   'tiktok.com',
-  'instagram.com',
   'x.com',
   'twitter.com',
 ];
@@ -51,6 +50,7 @@ async function main() {
     const db = client.db(MONGODB_DB);
 
     const sourceCollection = db.collection(MONGODB_COLLECTION);
+    const enrichmentCollection = db.collection('breaking_news_enrichments');
     const mediaCollection = db.collection('breaking_news_media');
 
     // Example: process a batch; you can remove .limit(50) in production
@@ -60,16 +60,26 @@ async function main() {
       const doc = await cursor.next();
       if (!doc) break;
 
-      // Avoid duplicate media docs
-      const existingMedia = await mediaCollection.findOne({ source_tweet_id: doc._id });
-      if (existingMedia) {
-        console.log(`Skipping _id ${doc._id.toString()} – media already exists.`);
+      // Get tweetId from the document
+      const tweetId = doc.tweetId || doc._id.toString();
+
+      // Fetch the enrichment data
+      const enrichment = await enrichmentCollection.findOne({ tweetId });
+      if (!enrichment) {
+        console.log(`\nNo enrichment found for tweetId: ${tweetId}, skipping...`);
         continue;
       }
 
+      // Delete existing media entry to reprocess
+      const deleteResult = await mediaCollection.deleteOne({ source_tweet_id: doc._id });
+      if (deleteResult.deletedCount > 0) {
+        console.log(`Deleted existing media entry for _id ${doc._id.toString()}`);
+      }
+
       console.log(doc.text || 'No context');
-      const query = buildQueryFromDoc(doc);
+      const query = buildQueryFromDoc(enrichment);
       console.log('\nProcessing _id:', doc._id.toString());
+      console.log('TweetId:', tweetId);
       console.log('Query:', query);
 
       let mediaLinks = [];
@@ -113,33 +123,36 @@ async function main() {
 }
 
 /**
- * Build a search query from the tweet document.
+ * Build a focused search query using:
+ * - First entity (organization or person)
+ * - First location
+ * - Event type
  */
-function buildQueryFromDoc(doc) {
+function buildQueryFromDoc(enrichment) {
   const parts = [];
 
-  if (doc.entities) {
-    if (Array.isArray(doc.entities.organizations)) {
-      parts.push(...doc.entities.organizations);
-    }
-    if (Array.isArray(doc.entities.people)) {
-      parts.push(...doc.entities.people);
-    }
+  // Add event_type first (most important)
+  if (enrichment.event_type) {
+    parts.push(enrichment.event_type.replace(/_/g, ' '));
   }
 
-  if (Array.isArray(doc.locations)) {
-    for (const loc of doc.locations) {
-      if (loc.place) parts.push(loc.place);
-      if (loc.country) parts.push(loc.country);
+  // Add first entity (organization or person)
+  if (enrichment.entities) {
+    if (Array.isArray(enrichment.entities.organizations) && enrichment.entities.organizations.length > 0) {
+      parts.push(enrichment.entities.organizations[0]);
+    } else if (Array.isArray(enrichment.entities.people) && enrichment.entities.people.length > 0) {
+      parts.push(enrichment.entities.people[0]);
     }
   }
 
-  if (doc.event_type) {
-    parts.push(doc.event_type.replace(/_/g, ' '));
-  }
-
-  if (doc.text) {
-    parts.push(doc.text);
+  // Add first location
+  if (Array.isArray(enrichment.locations) && enrichment.locations.length > 0) {
+    const loc = enrichment.locations[0];
+    if (loc.place) {
+      parts.push(loc.place);
+    } else if (loc.country) {
+      parts.push(loc.country);
+    }
   }
 
   return parts
@@ -150,53 +163,62 @@ function buildQueryFromDoc(doc) {
 }
 
 /**
- * Search for *video* pages (TikTok, Instagram, YouTube, X/Twitter, etc.) using normal
- * CSE web search, then filter + prioritize results by known media domains.
+ * Simple direct search using just the query + video keyword
  */
 async function searchVideoPages(query, maxResults = 20) {
+  if (!query || query.trim().length === 0) {
+    console.log('  Empty query, skipping search');
+    return [];
+  }
+
   const url = 'https://www.googleapis.com/customsearch/v1';
 
-  // Bias the query towards video content and major platforms
-  const videoQuery = `${query} (video OR footage) (tiktok OR youtube OR instagram OR "x.com" OR twitter)`;
+  // Simple approach: just add "video" to the query
+  const searchQuery = `${query} video`;
 
   const params = {
     key: GOOGLE_API_KEY,
     cx: GOOGLE_CSE_ID,
-    q: videoQuery,
-    num: Math.min(maxResults, 10), // CSE caps at 10 per request
+    q: searchQuery,
+    num: Math.min(maxResults, 10),
     safe: 'off',
+    dateRestrict: 'd7', // Only results from last 7 days
   };
 
-  const res = await axios.get(url, { params });
-  const items = res.data.items || [];
+  try {
+    const res = await axios.get(url, { params });
+    const items = res.data.items || [];
 
-  // Filter to media domains
-  const mediaResults = items.filter((item) => {
-    const link = (item.link || '').toLowerCase();
-    return MEDIA_DOMAINS.some((domain) => link.includes(domain));
-  });
+    // Filter to media domains only
+    const mediaResults = items.filter((item) => {
+      const link = (item.link || '').toLowerCase();
+      return MEDIA_DOMAINS.some((domain) => link.includes(domain));
+    });
 
-  // Prioritize primary platforms (TikTok, YouTube, Instagram, X/Twitter) first
-  const primary = [];
-  const secondary = [];
+    // Prioritize primary video platforms
+    const primary = [];
+    const secondary = [];
 
-  for (const item of mediaResults) {
-    const link = (item.link || '').toLowerCase();
-    const target = PRIMARY_VIDEO_DOMAINS.some((domain) => link.includes(domain))
-      ? primary
-      : secondary;
-    target.push(item);
+    for (const item of mediaResults) {
+      const link = (item.link || '').toLowerCase();
+      const target = PRIMARY_VIDEO_DOMAINS.some((domain) => link.includes(domain))
+        ? primary
+        : secondary;
+      target.push(item);
+    }
+
+    const ordered = [...primary, ...secondary];
+
+    return ordered.map((item) => ({
+      title: item.title,
+      link: item.link,
+      displayLink: item.displayLink,
+      snippet: item.snippet,
+    }));
+  } catch (err) {
+    console.error('  Search error:', err.message);
+    return [];
   }
-
-  const ordered = [...primary, ...secondary].slice(0, maxResults);
-
-  return ordered.map((item) => ({
-    title: item.title,
-    link: item.link,
-    displayLink: item.displayLink,
-    snippet: item.snippet,
-    mime: item.mime || null,
-  }));
 }
 
 // Run the script

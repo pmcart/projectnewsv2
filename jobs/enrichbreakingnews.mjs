@@ -279,7 +279,7 @@ account=${tweet.account || ''} url=${tweet.url || ''} datetime=${tweet.datetime 
   // variant tweaks
   const textFormat =
     variant === 'json-only'
-      ? { type: 'json' }
+      ? { type: 'json_object' }
       : {
           type: 'json_schema',
           name: enrichmentSchema.name,
@@ -503,7 +503,7 @@ async function main() {
     return;
   }
 
-  const cursor = coll.find(filter).limit(FETCH_LIMIT);
+  const cursor = coll.find(filter).sort({ createdAt: -1 }).limit(FETCH_LIMIT);
   const limit = pLimit(CONCURRENCY);
   const tasks = [];
   while (await cursor.hasNext()) {

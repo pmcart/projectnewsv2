@@ -10,12 +10,14 @@ class DocumentController {
       const { status, userId } = req.query;
       const currentUserId = req.user.userId;
       const userRole = req.user.role;
+      const organizationId = req.user.organizationId;
 
       const documents = await documentService.listDocuments({
         status,
         userId,
         currentUserId,
-        userRole
+        userRole,
+        organizationId
       });
 
       res.json(documents);
@@ -32,6 +34,7 @@ class DocumentController {
     try {
       const { title, type } = req.body;
       const ownerUserId = req.user.userId;
+      const organizationId = req.user.organizationId;
 
       if (!title || !type) {
         return res.status(400).json({
@@ -43,6 +46,7 @@ class DocumentController {
         title,
         type,
         ownerUserId,
+        organizationId,
       });
 
       res.status(201).json(document);
@@ -58,14 +62,10 @@ class DocumentController {
   async getDocument(req, res, next) {
     try {
       const { id } = req.params;
-      const document = await documentService.getDocumentById(id);
+      const organizationId = req.user.organizationId;
 
-      // Check permissions
-      const userRole = req.user.role;
-      const isOwner = document.ownerUserId === req.user.userId;
-
-      // For now, allow all authenticated users to view
-      // In production, you might want stricter controls
+      // Organization access is validated in the service
+      const document = await documentService.getDocumentById(id, organizationId);
 
       res.json(document);
     } catch (error) {
@@ -80,7 +80,9 @@ class DocumentController {
   async getVersions(req, res, next) {
     try {
       const { id } = req.params;
-      const versions = await documentService.getDocumentVersions(id);
+      const organizationId = req.user.organizationId;
+
+      const versions = await documentService.getDocumentVersions(id, organizationId);
 
       res.json(versions);
     } catch (error) {
@@ -112,6 +114,7 @@ class DocumentController {
       const { id } = req.params;
       const { htmlContent, sourceType, sourceText, sourceUrl, generationInputs } = req.body;
       const userId = req.user.userId;
+      const organizationId = req.user.organizationId;
 
       if (!htmlContent) {
         return res.status(400).json({
@@ -119,8 +122,8 @@ class DocumentController {
         });
       }
 
-      // Check document status and permissions
-      const document = await documentService.getDocumentById(id);
+      // Check document status and permissions (validates org access)
+      const document = await documentService.getDocumentById(id, organizationId);
       const userRole = req.user.role;
       const isOwner = document.ownerUserId === userId;
 
@@ -193,8 +196,9 @@ class DocumentController {
         });
       }
 
-      // Check permissions
-      const document = await documentService.getDocumentById(id);
+      // Check permissions (validates org access)
+      const organizationId = req.user.organizationId;
+      const document = await documentService.getDocumentById(id, organizationId);
       const userRole = req.user.role;
 
       if (document.status === 'IN_REVIEW' && userRole === 'READER') {
@@ -228,9 +232,10 @@ class DocumentController {
     try {
       const { id } = req.params;
       const userId = req.user.userId;
+      const organizationId = req.user.organizationId;
 
-      // Check ownership or permissions
-      const document = await documentService.getDocumentById(id);
+      // Check ownership or permissions (validates org access)
+      const document = await documentService.getDocumentById(id, organizationId);
       const isOwner = document.ownerUserId === userId;
 
       if (!isOwner && req.user.role === 'READER') {
@@ -255,6 +260,7 @@ class DocumentController {
     try {
       const { id } = req.params;
       const userId = req.user.userId;
+      const organizationId = req.user.organizationId;
       const { notes } = req.body;
 
       // Only EDITOR or WRITER can approve
@@ -263,6 +269,9 @@ class DocumentController {
           error: 'Only editors can approve documents',
         });
       }
+
+      // Validate org access first
+      await documentService.getDocumentById(id, organizationId);
 
       const updatedDocument = await documentService.approveDocument(id, userId, notes);
 
@@ -280,6 +289,7 @@ class DocumentController {
     try {
       const { id } = req.params;
       const userId = req.user.userId;
+      const organizationId = req.user.organizationId;
       const { notes, htmlContent } = req.body;
 
       // Only EDITOR or WRITER can reject
@@ -294,6 +304,9 @@ class DocumentController {
           error: 'Rejection notes must be at least 10 characters',
         });
       }
+
+      // Validate org access first
+      await documentService.getDocumentById(id, organizationId);
 
       const result = await documentService.rejectDocument({
         documentId: id,
@@ -316,6 +329,7 @@ class DocumentController {
     try {
       const { id } = req.params;
       const userId = req.user.userId;
+      const organizationId = req.user.organizationId;
       const { versionId, notes } = req.body;
 
       // Only EDITOR or WRITER can add review notes
@@ -324,6 +338,9 @@ class DocumentController {
           error: 'Only editors can add review notes',
         });
       }
+
+      // Validate org access first
+      await documentService.getDocumentById(id, organizationId);
 
       const reviewEvent = await documentService.addReviewNote({
         documentId: id,
@@ -345,7 +362,9 @@ class DocumentController {
   async getReviewEvents(req, res, next) {
     try {
       const { id } = req.params;
-      const events = await documentService.getReviewEvents(id);
+      const organizationId = req.user.organizationId;
+
+      const events = await documentService.getReviewEvents(id, organizationId);
 
       res.json(events);
     } catch (error) {
@@ -360,7 +379,9 @@ class DocumentController {
   async getAuditLog(req, res, next) {
     try {
       const { id } = req.params;
-      const logs = await documentService.getAuditLog(id);
+      const organizationId = req.user.organizationId;
+
+      const logs = await documentService.getAuditLog(id, organizationId);
 
       res.json(logs);
     } catch (error) {
