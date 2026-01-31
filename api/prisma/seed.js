@@ -8,9 +8,8 @@ async function main() {
   // Create test organizations
   console.log('📁 Creating organizations...');
   const organizations = [
-    { name: 'Acme Corporation', slug: 'acme-corp' },
-    { name: 'Tech Innovators', slug: 'tech-innovators' },
-    { name: 'Global News Network', slug: 'global-news' },
+    { name: 'Demo', slug: 'demo' },
+    { name: 'DemoAlt', slug: 'demo-alt' },
   ];
 
   const createdOrgs = {};
@@ -33,31 +32,50 @@ async function main() {
   console.log('\n👥 Creating users...');
   const users = [
     {
-      email: 'admin@test.com',
+      email: 'superadmin@demo.com',
+      password: await bcrypt.hash('password123', 10),
+      firstName: 'Super',
+      lastName: 'Admin',
+      role: 'EDITOR',
+      isActive: true,
+      isSuperAdmin: true,
+      organizationId: createdOrgs['demo'].id,
+    },
+    {
+      email: 'admin@demo.com',
       password: await bcrypt.hash('password123', 10),
       firstName: 'Admin',
       lastName: 'User',
       role: 'EDITOR',
       isActive: true,
-      organizationId: createdOrgs['acme-corp'].id,
+      organizationId: createdOrgs['demo'].id,
     },
     {
-      email: 'writer@test.com',
+      email: 'writer@demo.com',
       password: await bcrypt.hash('password123', 10),
       firstName: 'Writer',
       lastName: 'User',
       role: 'WRITER',
       isActive: true,
-      organizationId: createdOrgs['tech-innovators'].id,
+      organizationId: createdOrgs['demo'].id,
     },
     {
-      email: 'reader@test.com',
+      email: 'reader@demo.com',
       password: await bcrypt.hash('password123', 10),
       firstName: 'Reader',
       lastName: 'User',
       role: 'READER',
       isActive: true,
-      organizationId: createdOrgs['global-news'].id,
+      organizationId: createdOrgs['demo'].id,
+    },
+    {
+      email: 'admin@demo-alt.com',
+      password: await bcrypt.hash('password123', 10),
+      firstName: 'Alt',
+      lastName: 'Admin',
+      role: 'EDITOR',
+      isActive: true,
+      organizationId: createdOrgs['demo-alt'].id,
     },
   ];
 
@@ -79,16 +97,17 @@ async function main() {
   }
 
   console.log('\n📋 Test Data Summary:');
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log('ORGANIZATIONS:');
-  console.log('  • Acme Corporation (acme-corp)');
-  console.log('  • Tech Innovators (tech-innovators)');
-  console.log('  • Global News Network (global-news)');
+  console.log('  • Demo (demo)');
+  console.log('  • DemoAlt (demo-alt)');
   console.log('\nUSERS:');
-  console.log('  Email: admin@test.com   | Password: password123 | Role: EDITOR | Org: Acme Corporation');
-  console.log('  Email: writer@test.com  | Password: password123 | Role: WRITER | Org: Tech Innovators');
-  console.log('  Email: reader@test.com  | Password: password123 | Role: READER | Org: Global News Network');
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log('  Email: superadmin@demo.com | Password: password123 | Role: EDITOR | Org: Demo | SuperAdmin: Yes');
+  console.log('  Email: admin@demo.com      | Password: password123 | Role: EDITOR | Org: Demo');
+  console.log('  Email: writer@demo.com     | Password: password123 | Role: WRITER | Org: Demo');
+  console.log('  Email: reader@demo.com     | Password: password123 | Role: READER | Org: Demo');
+  console.log('  Email: admin@demo-alt.com  | Password: password123 | Role: EDITOR | Org: DemoAlt');
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log('\n✨ Seeding complete!');
 }
 
