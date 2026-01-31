@@ -2,7 +2,8 @@
 const BreakingNews = require('../models/BreakingNews');
 const BreakingNewsEnrichment = require('../models/BreakingNewsEnrichment');
 const BreakingNewsMedia = require('../models/BreakingNewsMedia');
-const BreakingNewsLive = require('../models/BreakingNewsLive'); 
+const BreakingNewsLive = require('../models/BreakingNewsLive');
+const BreakingNewsSearch = require('../models/BreakingNewsSearch'); 
 
 class BreakingNewsRepo {
   async getAll({ limit = 50, offset = 0 } = {}) {
@@ -35,6 +36,15 @@ class BreakingNewsRepo {
     .limit(limit)
     .lean()
     .exec();
+  }
+
+  async getSearchResultsByJobId({ jobId, limit = 50, offset = 0 } = {}) {
+    return BreakingNewsSearch.find({ jobId })
+      .sort({ createdAt: -1 })
+      .skip(offset)
+      .limit(limit)
+      .lean()
+      .exec();
   }
 }
 

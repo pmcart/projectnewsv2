@@ -1,9 +1,10 @@
-// twitterlivescraper.mjs
-// Scrape X (x.com) Live search results via GraphQL (no HTML parsing) using an *already-open* Chrome.
+// twittersearchscraper.mjs
+// Scrape X (x.com) Live search results via GraphQL using an *already-open* Chrome.
+// This version accepts a raw search term (no enrichment lookup required).
 // Saves results into MongoDB.
 //
 // Usage:
-//   node twitterlivescraper.mjs <tweetId>
+//   node twittersearchscraper.mjs <searchTerm> [jobId]
 //
 // Env (optional):
 //   CDP=http://127.0.0.1:9222
@@ -21,14 +22,13 @@
 // - You must be logged into X in that Chrome profile/session.
 
 import { chromium } from "playwright";
-import { MongoClient, ObjectId } from "mongodb";
+import { MongoClient } from "mongodb";
 
 const CDP_ENDPOINT = process.env.CDP || "http://127.0.0.1:9222";
 const MONGO_URI = process.env.MONGO_URI || "mongodb://127.0.0.1:27017";
 
 const DB_NAME = "global";
-const ENRICH_COLL = "breaking_news_enrichments";
-const OUT_COLL = "breaking_news_live";
+const OUT_COLL = "breaking_news_search";
 
 const NAV_TIMEOUT_MS = Number(process.env.NAV_TIMEOUT_MS || 45_000);
 const WAIT_FOR_GQL_MS = Number(process.env.WAIT_FOR_GQL_MS || 20_000);
@@ -51,37 +51,11 @@ function safeGet(obj, path, fallback = undefined) {
   return cur;
 }
 
-function buildQueryFromEnrichment(enrich) {
-  const parts = [];
-
-  // Based on your example enrichment shape (entities + locations)
-  const entities = enrich?.entities || {};
-  for (const key of ["organizations", "people", "equipment"]) {
-    const v = entities?.[key];
-    if (Array.isArray(v)) parts.push(...v);
-  }
-
-  const locations = enrich?.locations;
-  if (Array.isArray(locations)) {
-    for (const loc of locations) {
-      if (loc?.place) parts.push(loc.place);
-    }
-  }
-
-  // Keep the query compact (X search can get too broad/noisy)
-  const q = uniq(parts).slice(0, 8).join(" ");
-  return q || String(enrich?.tweetId || "").trim();
-}
-
 function toLiveSearchUrl(q) {
-  // Example requested:
-  // https://x.com/search?q=liverpoolfc+klopp&f=live
   return `https://x.com/search?q=${encodeURIComponent(q)}&f=live`;
 }
 
 function isSearchTimelineUrl(url) {
-  // Typical:
-  // https://x.com/i/api/graphql/<hash>/SearchTimeline?...variables=...
   return (
     typeof url === "string" &&
     url.includes("/i/api/graphql/") &&
@@ -146,23 +120,74 @@ function normalizeTweetResult(tweetResult) {
   const tweetId = r.rest_id || legacy?.id_str || null;
   const text = legacy?.full_text ?? legacy?.text ?? "";
 
-  // Try multiple paths for user data
-  let user = safeGet(r, ["core", "user_results", "result"], null);
-  if (!user) user = safeGet(r, ["core", "user_result", "result"], null);
-  if (!user) user = safeGet(r, ["user_results", "result"], null);
-  if (!user) user = safeGet(r, ["author", "result"], null);
+  // Try multiple paths for user data - X changes these frequently
+  let user = null;
+  let userLegacy = null;
 
-  let userLegacy = user?.legacy || null;
+  // Path 1: core.user_results.result (most common)
+  user = safeGet(r, ["core", "user_results", "result"], null);
 
-  // Sometimes user data is directly on user without legacy wrapper
-  const author = userLegacy?.screen_name || user?.screen_name || legacy?.user?.screen_name || null;
-  const authorName = userLegacy?.name || user?.name || legacy?.user?.name || null;
+  // Path 2: core.user_results.result might have another result wrapper
+  if (user?.result) user = user.result;
+
+  // Path 3: Try legacy path on user
+  if (user) userLegacy = user.legacy || null;
+
+  // Path 4: user_results directly on tweet
+  if (!user) {
+    user = safeGet(r, ["user_results", "result"], null);
+    if (user?.result) user = user.result;
+    if (user) userLegacy = user.legacy || null;
+  }
+
+  // Path 5: author field
+  if (!user) {
+    user = safeGet(r, ["author"], null);
+    if (user?.result) user = user.result;
+    if (user) userLegacy = user.legacy || null;
+  }
+
+  // Extract screen_name and name from various possible locations
+  let author =
+    userLegacy?.screen_name ||
+    user?.legacy?.screen_name ||
+    user?.screen_name ||
+    legacy?.user?.screen_name ||
+    null;
+
+  let authorName =
+    userLegacy?.name ||
+    user?.legacy?.name ||
+    user?.name ||
+    legacy?.user?.name ||
+    null;
+
+  // Build URL - try to extract username from existing URL if author is missing
+  let url = null;
+  if (author && tweetId) {
+    url = `https://x.com/${author}/status/${tweetId}`;
+  } else if (tweetId) {
+    // Try to find URL in legacy entities
+    const urls = legacy?.entities?.urls || [];
+    for (const u of urls) {
+      const expanded = u?.expanded_url || u?.url || "";
+      const match = expanded.match(/x\.com\/([^\/]+)\/status\//i) || expanded.match(/twitter\.com\/([^\/]+)\/status\//i);
+      if (match && match[1]) {
+        author = author || match[1];
+        url = `https://x.com/${match[1]}/status/${tweetId}`;
+        break;
+      }
+    }
+  }
+
+  // If still no author, use user_id_str as last resort (displays as number)
+  if (!author) {
+    author = legacy?.user_id_str || null;
+  }
 
   const tweetCreatedAt = legacy?.created_at ? new Date(legacy.created_at) : null;
 
   const { images, videos } = extractMediaFromLegacy(legacy);
-
-  const url = author && tweetId ? `https://x.com/${author}/status/${tweetId}` : null;
 
   return {
     tweetId,
@@ -190,7 +215,6 @@ function* walkInstructionEntries(instructions) {
       continue;
     }
 
-    // Fallback for unknown shapes that still have entries
     if (Array.isArray(inst?.entries)) {
       for (const e of inst.entries) yield e;
     }
@@ -198,8 +222,6 @@ function* walkInstructionEntries(instructions) {
 }
 
 function extractTweetsFromSearchTimelineJson(json) {
-  // Typical path:
-  // data.search_by_raw_query.search_timeline.timeline.instructions
   const instructions =
     safeGet(json, ["data", "search_by_raw_query", "search_timeline", "timeline", "instructions"], []) ||
     [];
@@ -207,12 +229,10 @@ function extractTweetsFromSearchTimelineJson(json) {
   const tweets = [];
 
   for (const entry of walkInstructionEntries(instructions)) {
-    // 1) Simple tweet entry:
     const tweetResult = safeGet(entry, ["content", "itemContent", "tweet_results", "result"], null);
     const normalized = normalizeTweetResult(tweetResult);
     if (normalized) tweets.push(normalized);
 
-    // 2) Module entries with content.items[*].item.itemContent.tweet_results.result
     const items = safeGet(entry, ["content", "items"], null);
     if (Array.isArray(items)) {
       for (const it of items) {
@@ -223,7 +243,6 @@ function extractTweetsFromSearchTimelineJson(json) {
     }
   }
 
-  // De-dupe inside payload
   const seen = new Set();
   const out = [];
   for (const t of tweets) {
@@ -252,10 +271,11 @@ async function cdpPreflight() {
 }
 
 async function main() {
-  const tweetId = process.argv[2]?.trim();
+  const searchTerm = process.argv[2]?.trim();
   const jobId = process.argv[3]?.trim() || null;
-  if (!tweetId) {
-    console.error("Usage: node twitterlivescraper.mjs <tweetId>");
+
+  if (!searchTerm) {
+    console.error("Usage: node twittersearchscraper.mjs <searchTerm> [jobId]");
     process.exit(1);
   }
 
@@ -267,17 +287,10 @@ async function main() {
   try {
     await mongo.connect();
     const db = mongo.db(DB_NAME);
-    const enrichColl = db.collection(ENRICH_COLL);
     const outColl = db.collection(OUT_COLL);
 
-    const enrichment = await enrichColl.findOne({ tweetId });
-    if (!enrichment) {
-      console.error(`No enrichment found in ${DB_NAME}.${ENRICH_COLL} for tweetId=${tweetId}`);
-      process.exit(2);
-    }
-
-    const query = buildQueryFromEnrichment(enrichment);
-    const searchUrl = toLiveSearchUrl(query);
+    // Build search URL directly from the search term (no enrichment lookup)
+    const searchUrl = toLiveSearchUrl(searchTerm);
 
     browser = await chromium.connectOverCDP(CDP_ENDPOINT);
     const ctx = browser.contexts()[0];
@@ -350,24 +363,11 @@ async function main() {
 
     const now = new Date();
 
-    const enrichmentId =
-      enrichment?._id && typeof enrichment._id === "object"
-        ? enrichment._id
-        : enrichment?._id
-          ? new ObjectId(enrichment._id)
-          : null;
-
     let upserts = 0;
 
     for (const t of deduped) {
-      // IMPORTANT FIX:
-      // Do NOT include 'createdAt' inside $set doc if you're also using $setOnInsert.createdAt.
-      // We'll store tweet time as 'tweetCreatedAt' and DB insertion time as 'createdAt'.
       const doc = {
-        enrichmentTweetId: tweetId,
-        enrichmentRef: enrichmentId,
-        query,
-        searchUrl,
+        searchTerm,
         jobId: jobId || null,
         tweetId: t.tweetId || null,
         url: t.url || null,
@@ -380,14 +380,15 @@ async function main() {
         images: t.images || [],
         videos: t.videos || [],
 
-        source: "x_live_search_graphql",
+        source: "x_search_graphql",
         capturedAt: now,
         lastSeenAt: now,
       };
 
+      // Filter by jobId and tweetId for deduplication
       const filter = doc.tweetId
-        ? { enrichmentTweetId: tweetId, tweetId: doc.tweetId }
-        : { enrichmentTweetId: tweetId, url: doc.url || null, text: doc.text };
+        ? { jobId, tweetId: doc.tweetId }
+        : { jobId, url: doc.url || null, text: doc.text };
 
       await outColl.updateOne(
         filter,
@@ -402,8 +403,8 @@ async function main() {
     }
 
     console.log(
-      `Enrichment tweetId=${tweetId}\n` +
-        `Query="${query}"\n` +
+      `SearchTerm="${searchTerm}"\n` +
+        `JobId=${jobId || 'none'}\n` +
         `URL=${searchUrl}\n` +
         `CapturedPayloads=${captured.length}\n` +
         `TweetsParsed=${deduped.length}\n` +

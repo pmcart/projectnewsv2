@@ -66,7 +66,7 @@ async function listBreakingNewsLive(req, res, next) {
     const since = req.query.since; // ISO string (optional)
 
     const items = await breakingNewsRepo.getLiveByJobId({
-      id,
+      jobId: id,
       limit,
       offset,
       since,
@@ -78,11 +78,29 @@ async function listBreakingNewsLive(req, res, next) {
   }
 }
 
+async function getSearchResultsByJobId(req, res, next) {
+  try {
+    const { jobId } = req.params;
+    const limit = parseInt(req.query.limit, 10) || 50;
+    const offset = parseInt(req.query.offset, 10) || 0;
+
+    const items = await breakingNewsRepo.getSearchResultsByJobId({
+      jobId,
+      limit,
+      offset,
+    });
+
+    res.json(items);
+  } catch (err) {
+    next(err);
+  }
+}
 
 module.exports = {
   listBreakingNews,
   getBreakingNewsById,
   getBreakingNewsEnrichmentById,
   getBreakingNewsMediaById,
-  listBreakingNewsLive
+  listBreakingNewsLive,
+  getSearchResultsByJobId,
 };

@@ -7,6 +7,18 @@ const SCRIPT_PATH =
   process.env.TWITTER_LIVE_SCRIPT_PATH ||
   path.join(process.cwd(), 'twitterlivescraper.mjs'); // adjust if needed
 
+const TWITTER_SEARCH_SCRIPT_PATH =
+  process.env.TWITTER_SEARCH_SCRIPT_PATH ||
+  path.join(process.cwd(), '..', 'jobs', 'twittersearchscraper.mjs');
+
+const SINGLE_ENRICHMENT_SCRIPT_PATH =
+  process.env.SINGLE_ENRICHMENT_SCRIPT_PATH ||
+  path.join(process.cwd(), '..', 'jobs', 'getsingleenrichment.mjs');
+
+const SINGLE_MEDIA_SCRIPT_PATH =
+  process.env.SINGLE_MEDIA_SCRIPT_PATH ||
+  path.join(process.cwd(), '..', 'jobs', 'getsinglemedia.mjs');
+
 async function runTwitterLiveScraperJob({ jobId, tweetId }) {
   // mark running ASAP
   await jobsRepo.markRunning(jobId);
@@ -50,4 +62,135 @@ async function runTwitterLiveScraperJob({ jobId, tweetId }) {
   });
 }
 
-module.exports = { runTwitterLiveScraperJob };
+async function runTwitterSearchScraperJob({ jobId, searchTerm }) {
+  await jobsRepo.markRunning(jobId);
+  await jobsRepo.appendLog(jobId, 'system', `Spawning search script for term="${searchTerm}"`);
+
+  const child = spawn(process.execPath, [TWITTER_SEARCH_SCRIPT_PATH, searchTerm, jobId], {
+    env: { ...process.env },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+
+  await jobsRepo.appendLog(jobId, 'system', `Spawned PID=${child.pid}`);
+
+  child.stdout.on('data', (buf) => {
+    jobsRepo.appendLog(jobId, 'stdout', buf.toString('utf8')).catch(() => {});
+  });
+
+  child.stderr.on('data', (buf) => {
+    jobsRepo.appendLog(jobId, 'stderr', buf.toString('utf8')).catch(() => {});
+  });
+
+  child.on('error', async (err) => {
+    await jobsRepo.appendLog(jobId, 'system', `Process error: ${err.message}`);
+    await jobsRepo.markFinished({
+      id: jobId,
+      status: 'failed',
+      exitCode: null,
+      error: { message: err.message, stack: err.stack },
+    });
+  });
+
+  child.on('close', async (code) => {
+    const succeeded = code === 0;
+    await jobsRepo.appendLog(jobId, 'system', `Process exited code=${code}`);
+
+    await jobsRepo.markFinished({
+      id: jobId,
+      status: succeeded ? 'succeeded' : 'failed',
+      exitCode: code,
+      error: succeeded ? null : { message: `Exited with code ${code}` },
+    });
+  });
+}
+
+async function runSingleEnrichmentJob({ jobId, tweetId, tweetText }) {
+  await jobsRepo.markRunning(jobId);
+  await jobsRepo.appendLog(jobId, 'system', `Running single enrichment for tweetId=${tweetId}`);
+
+  const child = spawn(process.execPath, [SINGLE_ENRICHMENT_SCRIPT_PATH, tweetId, tweetText, jobId], {
+    env: { ...process.env },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+
+  await jobsRepo.appendLog(jobId, 'system', `Spawned PID=${child.pid}`);
+
+  child.stdout.on('data', (buf) => {
+    jobsRepo.appendLog(jobId, 'stdout', buf.toString('utf8')).catch(() => {});
+  });
+
+  child.stderr.on('data', (buf) => {
+    jobsRepo.appendLog(jobId, 'stderr', buf.toString('utf8')).catch(() => {});
+  });
+
+  child.on('error', async (err) => {
+    await jobsRepo.appendLog(jobId, 'system', `Process error: ${err.message}`);
+    await jobsRepo.markFinished({
+      id: jobId,
+      status: 'failed',
+      exitCode: null,
+      error: { message: err.message, stack: err.stack },
+    });
+  });
+
+  child.on('close', async (code) => {
+    const succeeded = code === 0;
+    await jobsRepo.appendLog(jobId, 'system', `Process exited code=${code}`);
+
+    await jobsRepo.markFinished({
+      id: jobId,
+      status: succeeded ? 'succeeded' : 'failed',
+      exitCode: code,
+      error: succeeded ? null : { message: `Exited with code ${code}` },
+    });
+  });
+}
+
+async function runSingleMediaJob({ jobId, tweetId, tweetText }) {
+  await jobsRepo.markRunning(jobId);
+  await jobsRepo.appendLog(jobId, 'system', `Running single media search for tweetId=${tweetId}`);
+
+  const child = spawn(process.execPath, [SINGLE_MEDIA_SCRIPT_PATH, tweetId, tweetText || '', jobId], {
+    env: { ...process.env },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+
+  await jobsRepo.appendLog(jobId, 'system', `Spawned PID=${child.pid}`);
+
+  child.stdout.on('data', (buf) => {
+    jobsRepo.appendLog(jobId, 'stdout', buf.toString('utf8')).catch(() => {});
+  });
+
+  child.stderr.on('data', (buf) => {
+    jobsRepo.appendLog(jobId, 'stderr', buf.toString('utf8')).catch(() => {});
+  });
+
+  child.on('error', async (err) => {
+    await jobsRepo.appendLog(jobId, 'system', `Process error: ${err.message}`);
+    await jobsRepo.markFinished({
+      id: jobId,
+      status: 'failed',
+      exitCode: null,
+      error: { message: err.message, stack: err.stack },
+    });
+  });
+
+  child.on('close', async (code) => {
+    const succeeded = code === 0;
+    await jobsRepo.appendLog(jobId, 'system', `Process exited code=${code}`);
+
+    await jobsRepo.markFinished({
+      id: jobId,
+      status: succeeded ? 'succeeded' : 'failed',
+      exitCode: code,
+      error: succeeded ? null : { message: `Exited with code ${code}` },
+    });
+  });
+}
+
+module.exports = {
+  runTwitterLiveScraperJob,
+  runTwitterSearchScraperJob,
+  runSingleEnrichmentJob,
+  runSingleMediaJob,
+};

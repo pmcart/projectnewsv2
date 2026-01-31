@@ -2,7 +2,9 @@
 <div class="p-3">
   <!-- Header -->
   <div class="flex items-center justify-between mb-2">
-    <h2 class="text-sm font-semibold">Breaking news</h2>
+    <h2 class="text-sm font-semibold">
+      {{ searchMode() ? 'Search Results' : 'Breaking news' }}
+    </h2>
 
     <div class="flex items-center gap-2">
       <app-new-content-button
@@ -24,11 +26,21 @@
       </button>
 
       <button
+        *ngIf="!searchMode()"
         type="button"
         (click)="loadBreakingNews()"
         class="text-xs px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700"
       >
         Refresh
+      </button>
+
+      <button
+        *ngIf="searchMode()"
+        type="button"
+        (click)="clearSearch()"
+        class="text-xs px-2 py-1 rounded-lg bg-red-700 hover:bg-red-600 border border-red-600"
+      >
+        ✕ Clear Search
       </button>
     </div>
   </div>
@@ -37,12 +49,46 @@
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
     <!-- Left: list -->
     <div class="lg:col-span-1 rounded-2xl border border-slate-800 bg-slate-900">
+      <!-- Search input -->
       <div class="p-3 border-b border-slate-800">
-        <div *ngIf="loading()" class="text-xs text-slate-400">Loading…</div>
-        <div *ngIf="error()" class="text-xs text-red-400">{{ error() }}</div>
+        <div class="flex gap-2">
+          <input
+            type="text"
+            [(ngModel)]="searchTerm"
+            (keydown.enter)="executeSearch()"
+            placeholder="Search X..."
+            class="flex-1 px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-sky-500"
+          />
+          <button
+            type="button"
+            (click)="executeSearch()"
+            [disabled]="searchStage() === 'starting' || searchStage() === 'running'"
+            class="px-3 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Search
+          </button>
+        </div>
+        <div *ngIf="searchError()" class="text-xs text-red-400 mt-2">{{ searchError() }}</div>
+        <div *ngIf="searchStage() === 'running'" class="text-xs text-slate-400 mt-2 flex items-center gap-2">
+          <span class="inline-block h-3 w-3 rounded-full border-2 border-slate-500 border-t-transparent animate-spin"></span>
+          {{ searchMessage() }}
+        </div>
+        <div *ngIf="searchMode() && searchStage() === 'done'" class="text-xs text-emerald-400 mt-2">
+          {{ searchResults().length }} results found. Click to load enrichment.
+        </div>
       </div>
 
-      <div class="max-h-[70vh] overflow-auto">
+      <!-- Status bar -->
+      <div class="p-3 border-b border-slate-800" *ngIf="!searchMode()">
+        <div *ngIf="loading()" class="text-xs text-slate-400">Loading…</div>
+        <div *ngIf="error()" class="text-xs text-red-400">{{ error() }}</div>
+        <div *ngIf="!loading() && !error()" class="text-xs text-slate-500">
+          {{ breakingNews().length }} items
+        </div>
+      </div>
+
+      <!-- List: Breaking News (normal mode) -->
+      <div class="max-h-[65vh] overflow-auto" *ngIf="!searchMode()">
         <button
           *ngFor="let item of breakingNews(); trackBy: trackById"
           type="button"
@@ -65,19 +111,60 @@
           No breaking news items found.
         </div>
       </div>
+
+      <!-- List: Search Results (search mode) -->
+      <div class="max-h-[65vh] overflow-auto" *ngIf="searchMode()">
+        <button
+          *ngFor="let item of searchResults(); trackBy: trackSearchById"
+          type="button"
+          (click)="selectSearchResult(item)"
+          class="w-full text-left p-3 border-b border-slate-800 hover:bg-slate-800/40"
+          [class.bg-slate-800]="selectedId() === item.tweetId"
+        >
+          <div class="text-xs text-slate-300 font-medium">
+            {{ item.authorName || item.author || 'Unknown' }}
+          </div>
+          <div class="text-xs text-slate-200 mt-1 line-clamp-3 whitespace-pre-wrap">
+            {{ item.text || '—' }}
+          </div>
+          <div class="mt-2 flex flex-wrap gap-1" *ngIf="item.images?.length">
+            <img
+              *ngFor="let img of item.images?.slice(0, 2)"
+              [src]="img"
+              alt="image"
+              class="h-10 w-10 object-cover rounded border border-slate-700"
+            />
+          </div>
+          <div class="text-[11px] text-slate-500 mt-2">
+            Tweet: {{ item.tweetId }}
+          </div>
+        </button>
+
+        <div *ngIf="searchResults().length === 0 && searchStage() !== 'running'" class="p-3 text-xs text-slate-500">
+          {{ searchStage() === 'done' ? 'No results found.' : 'Enter a search term above.' }}
+        </div>
+      </div>
     </div>
 
     <!-- Right: details -->
     <div class="lg:col-span-2 space-y-3">
+      <!-- Placeholder when in search mode but no result selected -->
+      <div *ngIf="searchMode() && !selectedSearchResult()" class="rounded-2xl border border-slate-800 bg-slate-900 p-6 text-center">
+        <div class="text-slate-400 text-sm">
+          Click on a search result to load enrichment and media
+        </div>
+      </div>
+
       <!-- Enrichment -->
       <app-enrichment-view
+        *ngIf="!searchMode() || selectedSearchResult()"
         [enrichment]="enrichment()"
         [loading]="enrichmentLoading()"
         [error]="enrichmentError()"
       />
 
       <!-- Media -->
-      <div class="rounded-2xl border border-slate-800 bg-slate-900 p-3">
+      <div *ngIf="!searchMode() || selectedSearchResult()" class="rounded-2xl border border-slate-800 bg-slate-900 p-3">
         <div class="text-sm font-semibold mb-2">Media</div>
 
         <div *ngIf="mediaLoading()" class="text-xs text-slate-400">Loading media…</div>
@@ -223,3 +310,4 @@
 
   </div>
 </div>
+

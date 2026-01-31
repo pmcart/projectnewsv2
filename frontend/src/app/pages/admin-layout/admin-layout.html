@@ -46,6 +46,11 @@
           [img]="Tv"
           class="w-5 h-5 flex-shrink-0"
         ></lucide-icon>
+        <lucide-icon
+          *ngIf="item.icon === 'bell-ring'"
+          [img]="BellRing"
+          class="w-5 h-5 flex-shrink-0"
+        ></lucide-icon>
         <span>{{ item.label }}</span>
       </button>
     </nav>

@@ -36,6 +36,26 @@ export interface BreakingNewsLiveItem {
   url?: string | null;
 }
 
+export interface SearchResultItem {
+  _id: string;
+  tweetId: string;
+  searchTerm?: string;
+  jobId?: string;
+  author?: string | null;
+  authorName?: string | null;
+  capturedAt?: string;
+  createdAt?: string;
+  lastSeenAt?: string;
+
+  images?: string[];
+  videos?: any[];
+
+  source?: string;
+  text?: string;
+  tweetCreatedAt?: string;
+  url?: string | null;
+}
+
 // 👇 new: enrichment interface (only fields we actually use)
 export interface BreakingNewsEnrichment {
   tweetId: string;
@@ -155,6 +175,18 @@ export class BreakingNewsService {
     return this.http.get<BreakingNewsLiveItem[]>(
       `${this.baseUrl}/${jobId}/live?${qs.toString()}`,
       { headers: this.getHeaders() }
-    );  
+    );
+  }
+
+  getSearchResultsByJobId(jobId: string, limit = 50, offset = 0): Observable<SearchResultItem[]> {
+    const qs = new URLSearchParams({
+      limit: String(limit),
+      offset: String(offset),
+    });
+
+    return this.http.get<SearchResultItem[]>(
+      `${this.baseUrl}/search/${jobId}/results?${qs.toString()}`,
+      { headers: this.getHeaders() }
+    );
   }
 }

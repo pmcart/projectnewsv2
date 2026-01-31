@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterModule, Router, ActivatedRoute, NavigationEnd } from '@angular/router';
 import { filter, map } from 'rxjs/operators';
 import { AuthService, User } from '../../services/auth.service';
-import { LucideAngularModule, TrendingUp, Bell, Newspaper, ClipboardCheck, Building2, Tv } from 'lucide-angular';
+import { LucideAngularModule, TrendingUp, Bell, Newspaper, ClipboardCheck, Building2, Tv, BellRing } from 'lucide-angular';
 
 type MenuItem = {
   label: string;
@@ -24,13 +24,15 @@ export class AdminLayoutComponent {
   readonly ClipboardCheck = ClipboardCheck;
   readonly Building2 = Building2;
   readonly Tv = Tv;
+  readonly BellRing = BellRing;
 
   menuItems: MenuItem[] = [
     { label: 'Overview', icon: 'trending-up', link: '/admin/dashboard' },
     { label: 'Breaking news', icon: 'bell', link: '/admin/breaking-news' },
     { label: 'News Feed', icon: 'newspaper', link: '/admin/news-feed' },
     { label: 'Live Streams', icon: 'tv', link: '/admin/live-streams' },
-    { label: 'Content Review', icon: 'clipboard-check', link: '/admin/content-review' }
+    { label: 'Content Review', icon: 'clipboard-check', link: '/admin/content-review' },
+    { label: 'Alerts', icon: 'bell-ring', link: '/admin/alerts' }
     // add more when you have components:
     // { label: 'Articles', icon: 'file-lines', link: '/admin/articles' },
     // { label: 'Users', icon: 'users', link: '/admin/users' },

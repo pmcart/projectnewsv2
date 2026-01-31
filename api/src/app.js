@@ -24,6 +24,7 @@ app.use('/api/rss', require('./routes/rssFeedRoutes'));
 app.use('/api/jobs', require('./routes/jobsRoutes'));
 app.use('/api/documents', require('./routes/documentRoutes'));
 app.use('/api/videos', require('./routes/videoRoutes'));
+app.use('/api/stats', require('./routes/statsRoutes'));
 
 // Error handler (last)
 app.use(errorHandler);

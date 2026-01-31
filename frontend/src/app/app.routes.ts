@@ -1,12 +1,14 @@
 import { Routes } from '@angular/router';
 import { LoginComponent } from './pages/login/login';
 import { AdminLayoutComponent } from './pages/admin-layout/admin-layout';
+import { AdminDashboardComponent } from './pages/admin-dashboard/admin-dashboard';
 import { BreakingNewsComponent } from './pages/breaking-news/breaking-news';
 import { RssFeedComponent } from './pages/news-feed/rss-feed';
 import { NewContentComponent } from './pages/new-content/new-content';
 import { NewVideoComponent } from './pages/new-video/new-video';
 import { ContentReviewComponent } from './pages/content-review/content-review';
 import { LiveStreamsComponent } from './pages/live-streams/live-streams';
+import { AlertsComponent } from './pages/alerts/alerts';
 import { authGuard } from './guards/auth.guard';
 
 export const routes: Routes = [
@@ -20,14 +22,14 @@ export const routes: Routes = [
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
 
-      // {
-      //   path: 'dashboard',
-      //   component: AdminDashboardComponent,
-      //   data: {
-      //     title: 'Overview',
-      //     subtitle: 'High-level summary and quick actions.'
-      //   }
-      // },
+      {
+        path: 'dashboard',
+        component: AdminDashboardComponent,
+        data: {
+          title: 'Overview',
+          subtitle: 'High-level summary and quick actions.'
+        }
+      },
       {
         path: 'breaking-news',
         component: BreakingNewsComponent,
@@ -74,6 +76,14 @@ export const routes: Routes = [
         data: {
           title: 'Live News Streams',
           subtitle: 'Watch live news from multiple sources around the world.'
+        }
+      },
+      {
+        path: 'alerts',
+        component: AlertsComponent,
+        data: {
+          title: 'Alerts',
+          subtitle: 'Configure keyword alerts for breaking news notifications.'
         }
       }
 

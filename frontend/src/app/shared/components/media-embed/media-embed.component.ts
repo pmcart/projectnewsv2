@@ -5,6 +5,9 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 export interface MediaLink {
   link: string;
   text?: string;
+  title?: string;
+  snippet?: string;
+  displayLink?: string;
 }
 
 // Matches what the backend is returning in `videos[]`
@@ -33,6 +36,8 @@ interface EmbedItem {
   provider: Provider;
   originalUrl: string;
   displayText?: string;
+  title?: string;
+  snippet?: string;
   domain: string;
   embedUrl?: SafeResourceUrl;
   embeddable: boolean; // final decision for iframe vs plain link
@@ -73,32 +78,43 @@ type InputItem = MediaLink | string | BackendVideo;
           </div>
         </div>
 
-        <!-- Fallback: plain link/card -->
+        <!-- Fallback: plain link/card with rich metadata -->
         <ng-template #plainLink>
-          <a
-            [href]="item.originalUrl"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="block rounded-lg border border-slate-700 bg-slate-900/80 px-3 py-2 text-xs hover:border-sky-500/60 hover:bg-slate-900 transition-colors break-all"
-          >
-            <div class="flex items-center justify-between gap-2 mb-1">
-              <span class="text-[11px] text-slate-300">
-                {{ item.displayText || item.originalUrl }}
-              </span>
-              <span class="text-[10px] text-slate-500">
-                {{ item.domain }}
-              </span>
+          <div class="rounded-lg border border-slate-700 bg-slate-900/80 px-3 py-2">
+            <!-- Title (if available) -->
+            <div *ngIf="item.title" class="text-xs font-medium text-slate-200 mb-2 line-clamp-2">
+              {{ item.title }}
             </div>
-          </a>
-        </ng-template>
 
-        <!-- Optional text/description below -->
-        <p
-          *ngIf="item.displayText"
-          class="text-[11px] text-slate-200"
-        >
-          {{ item.displayText }}
-        </p>
+            <!-- Snippet/Description (if available) -->
+            <p *ngIf="item.snippet" class="text-[11px] text-slate-400 mb-2 line-clamp-3">
+              {{ item.snippet }}
+            </p>
+
+            <!-- Embedding disabled notice for YouTube -->
+            <div *ngIf="item.provider === 'youtube' && !item.embeddable" class="flex items-center gap-1 mb-2 px-2 py-1 rounded bg-yellow-900/20 border border-yellow-800/40">
+              <span class="text-[10px] text-yellow-400">⚠️ Embedding disabled by uploader</span>
+            </div>
+
+            <!-- Link -->
+            <a
+              [href]="item.originalUrl"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="inline-flex items-center gap-1 text-xs text-sky-400 hover:text-sky-300 hover:underline transition-colors"
+            >
+              <span>Watch on {{ item.provider === 'youtube' ? 'YouTube' : (item.provider | titlecase) }}</span>
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+            </a>
+
+            <!-- Domain (subtle) -->
+            <div class="text-[10px] text-slate-500 mt-1">
+              {{ item.domain }}
+            </div>
+          </div>
+        </ng-template>
       </div>
     </div>
   `
@@ -122,6 +138,8 @@ export class MediaEmbedComponent {
     // ---- Normalise input: url + displayText + backend metadata ----
     let url: string;
     let displayText: string | undefined;
+    let title: string | undefined;
+    let snippet: string | undefined;
     let backendProvider: string | undefined;
     let backendEmbeddable: boolean | undefined;
 
@@ -132,11 +150,16 @@ export class MediaEmbedComponent {
       url = raw.url;
       backendProvider = raw.provider;
       backendEmbeddable = raw.embeddable;
+      title = raw.title;
+      snippet = raw.snippet;
       displayText = raw.title || raw.snippet || undefined;
     } else {
-      // MediaLink
+      // MediaLink or BreakingNewsMediaLink
       url = raw.link;
       displayText = raw.text;
+      // Check if it has title/snippet fields (BreakingNewsMediaLink structure)
+      if ('title' in raw) title = raw.title;
+      if ('snippet' in raw) snippet = raw.snippet;
     }
 
     const domain = this.getDomain(url).toLowerCase();
@@ -227,6 +250,8 @@ export class MediaEmbedComponent {
       provider,
       originalUrl: url,
       displayText,
+      title,
+      snippet,
       domain,
       embedUrl,
       embeddable

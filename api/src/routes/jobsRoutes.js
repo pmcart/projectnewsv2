@@ -14,4 +14,13 @@ router.get('/:id', controller.getJobById);
 // POST /api/jobs/twitter-live  body: { tweetId }
 router.post('/twitter-live', controller.createTwitterLiveJob);
 
+// POST /api/jobs/twitter-search  body: { searchTerm }
+router.post('/twitter-search', controller.createTwitterSearchJob);
+
+// POST /api/jobs/single-enrichment  body: { tweetId, tweetText }
+router.post('/single-enrichment', controller.createSingleEnrichmentJob);
+
+// POST /api/jobs/single-media  body: { tweetId, tweetText }
+router.post('/single-media', controller.createSingleMediaJob);
+
 module.exports = router;

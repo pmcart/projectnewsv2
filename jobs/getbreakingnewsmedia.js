@@ -1,5 +1,6 @@
 // enrichMedia.js
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 const { MongoClient } = require('mongodb');
 const axios = require('axios');
 
@@ -43,15 +44,21 @@ const MEDIA_DOMAINS = [
 ];
 
 async function main() {
+  console.log('Starting media enrichment...');
   const client = new MongoClient(MONGODB_URI);
 
   try {
     await client.connect();
+    console.log('Connected to MongoDB');
     const db = client.db(MONGODB_DB);
 
     const sourceCollection = db.collection(MONGODB_COLLECTION);
     const enrichmentCollection = db.collection('breaking_news_enrichments');
     const mediaCollection = db.collection('breaking_news_media');
+
+    console.log(`Using collection: ${MONGODB_COLLECTION}`);
+    const count = await sourceCollection.countDocuments();
+    console.log(`Total documents in collection: ${count}`);
 
     // Example: process a batch; you can remove .limit(50) in production
     const cursor = sourceCollection.find().limit(50);
@@ -163,6 +170,27 @@ function buildQueryFromDoc(enrichment) {
 }
 
 /**
+ * Check if a TikTok result is relevant to the query
+ * Returns true if at least one keyword from query appears in title or snippet
+ */
+function isTikTokResultRelevant(item, query) {
+  // Extract keywords from query (words with 3+ chars)
+  const keywords = query
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(word => word.length >= 3);
+
+  const title = (item.title || '').toLowerCase();
+  const snippet = (item.snippet || '').toLowerCase();
+  const combined = `${title} ${snippet}`;
+
+  // Require at least one keyword match
+  const matchCount = keywords.filter(keyword => combined.includes(keyword)).length;
+
+  return matchCount >= 1;
+}
+
+/**
  * Simple direct search using just the query + video keyword
  */
 async function searchVideoPages(query, maxResults = 20) {
@@ -190,9 +218,22 @@ async function searchVideoPages(query, maxResults = 20) {
     const items = res.data.items || [];
 
     // Filter to media domains only
-    const mediaResults = items.filter((item) => {
+    let mediaResults = items.filter((item) => {
       const link = (item.link || '').toLowerCase();
       return MEDIA_DOMAINS.some((domain) => link.includes(domain));
+    });
+
+    // Extra filtering for TikTok - check relevance
+    mediaResults = mediaResults.filter((item) => {
+      const link = (item.link || '').toLowerCase();
+      if (link.includes('tiktok.com')) {
+        const isRelevant = isTikTokResultRelevant(item, query);
+        if (!isRelevant) {
+          console.log(`  Filtered out irrelevant TikTok: ${item.title}`);
+        }
+        return isRelevant;
+      }
+      return true; // Keep non-TikTok results
     });
 
     // Prioritize primary video platforms

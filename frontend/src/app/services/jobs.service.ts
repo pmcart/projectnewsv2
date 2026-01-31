@@ -38,6 +38,30 @@ export class JobsService {
     );
   }
 
+  createTwitterSearchJob(searchTerm: string): Observable<JobResponse> {
+    return this.http.post<JobResponse>(
+      `${this.baseUrl}/twitter-search`,
+      { searchTerm },
+      { headers: this.getHeaders() }
+    );
+  }
+
+  createSingleEnrichmentJob(tweetId: string, tweetText: string): Observable<JobResponse> {
+    return this.http.post<JobResponse>(
+      `${this.baseUrl}/single-enrichment`,
+      { tweetId, tweetText },
+      { headers: this.getHeaders() }
+    );
+  }
+
+  createSingleMediaJob(tweetId: string, tweetText: string): Observable<JobResponse> {
+    return this.http.post<JobResponse>(
+      `${this.baseUrl}/single-media`,
+      { tweetId, tweetText },
+      { headers: this.getHeaders() }
+    );
+  }
+
   getJob(jobId: string): Observable<JobRecord> {
     return this.http.get<JobRecord>(`${this.baseUrl}/${jobId}`, {
       headers: this.getHeaders()

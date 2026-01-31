@@ -1,5 +1,10 @@
 const jobsRepo = require('./../mongo/jobEntry');
-const { runTwitterLiveScraperJob } = require('../services/jobRunner');
+const {
+  runTwitterLiveScraperJob,
+  runTwitterSearchScraperJob,
+  runSingleEnrichmentJob,
+  runSingleMediaJob,
+} = require('../services/jobRunner');
 
 async function createTwitterLiveJob(req, res, next) {
   try {
@@ -14,6 +19,92 @@ async function createTwitterLiveJob(req, res, next) {
     // Fire-and-forget (runs in same API process)
     // IMPORTANT: ensure we pass a STRING jobId down to the runner so it can forward it to the script argv/env
     runTwitterLiveScraperJob({ jobId: String(job._id), tweetId }).catch(async (err) => {
+      await jobsRepo.appendLog(job._id, 'system', `Runner error: ${err.message}`);
+      await jobsRepo.markFinished({
+        id: job._id,
+        status: 'failed',
+        exitCode: null,
+        error: { message: err.message, stack: err.stack },
+      });
+    });
+
+    return res.status(202).json({ jobId: String(job._id) });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function createTwitterSearchJob(req, res, next) {
+  try {
+    const searchTerm = String(req.body?.searchTerm || '').trim();
+    if (!searchTerm) return res.status(400).json({ error: 'searchTerm is required' });
+
+    const job = await jobsRepo.createJob({
+      type: 'twittersearchscraper',
+      payload: { searchTerm },
+    });
+
+    runTwitterSearchScraperJob({ jobId: String(job._id), searchTerm }).catch(async (err) => {
+      await jobsRepo.appendLog(job._id, 'system', `Runner error: ${err.message}`);
+      await jobsRepo.markFinished({
+        id: job._id,
+        status: 'failed',
+        exitCode: null,
+        error: { message: err.message, stack: err.stack },
+      });
+    });
+
+    return res.status(202).json({ jobId: String(job._id) });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function createSingleEnrichmentJob(req, res, next) {
+  try {
+    const tweetId = String(req.body?.tweetId || '').trim();
+    const tweetText = String(req.body?.tweetText || '').trim();
+
+    if (!tweetId || !tweetText) {
+      return res.status(400).json({ error: 'tweetId and tweetText are required' });
+    }
+
+    const job = await jobsRepo.createJob({
+      type: 'singleenrichment',
+      payload: { tweetId, tweetText },
+    });
+
+    runSingleEnrichmentJob({ jobId: String(job._id), tweetId, tweetText }).catch(async (err) => {
+      await jobsRepo.appendLog(job._id, 'system', `Runner error: ${err.message}`);
+      await jobsRepo.markFinished({
+        id: job._id,
+        status: 'failed',
+        exitCode: null,
+        error: { message: err.message, stack: err.stack },
+      });
+    });
+
+    return res.status(202).json({ jobId: String(job._id) });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function createSingleMediaJob(req, res, next) {
+  try {
+    const tweetId = String(req.body?.tweetId || '').trim();
+    const tweetText = String(req.body?.tweetText || '').trim();
+
+    if (!tweetId) {
+      return res.status(400).json({ error: 'tweetId is required' });
+    }
+
+    const job = await jobsRepo.createJob({
+      type: 'singlemedia',
+      payload: { tweetId, tweetText },
+    });
+
+    runSingleMediaJob({ jobId: String(job._id), tweetId, tweetText }).catch(async (err) => {
       await jobsRepo.appendLog(job._id, 'system', `Runner error: ${err.message}`);
       await jobsRepo.markFinished({
         id: job._id,
@@ -57,6 +148,9 @@ async function listJobs(req, res, next) {
 
 module.exports = {
   createTwitterLiveJob,
+  createTwitterSearchJob,
+  createSingleEnrichmentJob,
+  createSingleMediaJob,
   getJobById,
   listJobs,
 };

@@ -1,0 +1,281 @@
+<div class="dashboard-page p-6">
+  <div class="max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-6">
+      <div>
+        <h1 class="text-2xl font-bold text-white mb-1">Dashboard</h1>
+        <p class="text-slate-400 text-sm">
+          @if (lastUpdated()) {
+            Last updated: {{ formatDate(lastUpdated()!.toISOString()) }}
+          }
+        </p>
+      </div>
+      <button
+        (click)="onRefresh()"
+        [disabled]="loading()"
+        class="px-4 py-2 bg-slate-700 hover:bg-slate-600 disabled:bg-slate-800 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center gap-2"
+      >
+        <svg class="w-4 h-4" [class.animate-spin]="loading()" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+        </svg>
+        Refresh
+      </button>
+    </div>
+
+    <!-- Loading State -->
+    @if (loading() && !stats()) {
+      <div class="flex items-center justify-center py-24">
+        <div class="text-center">
+          <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p class="text-slate-400">Loading dashboard...</p>
+        </div>
+      </div>
+    }
+
+    <!-- Error State -->
+    @else if (error()) {
+      <div class="bg-red-900/20 border border-red-800 rounded-lg p-6 mb-6">
+        <p class="text-red-400">{{ error() }}</p>
+        <button (click)="onRefresh()" class="mt-4 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded transition-colors">
+          Try Again
+        </button>
+      </div>
+    }
+
+    @else if (stats()) {
+      <!-- KPI Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <!-- Breaking News Card -->
+        <div
+          (click)="navigateToBreakingNews()"
+          class="bg-slate-900/60 rounded-lg border border-slate-800 p-5 hover:border-cyan-500/50 transition-colors cursor-pointer"
+        >
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-slate-400 text-sm font-medium">Breaking News</p>
+              <p class="text-3xl font-bold text-white mt-1">{{ stats()!.breakingNews.total }}</p>
+              <p class="text-cyan-400 text-sm mt-1">+{{ stats()!.breakingNews.last24h }} today</p>
+            </div>
+            <div class="w-12 h-12 bg-cyan-500/20 rounded-lg flex items-center justify-center">
+              <svg class="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- Documents Card -->
+        <div
+          (click)="navigateToContentReview()"
+          class="bg-slate-900/60 rounded-lg border border-slate-800 p-5 hover:border-blue-500/50 transition-colors cursor-pointer"
+        >
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-slate-400 text-sm font-medium">Documents</p>
+              <p class="text-3xl font-bold text-white mt-1">{{ stats()!.documents.total }}</p>
+              @if (stats()!.documents.inReview > 0) {
+                <p class="text-amber-400 text-sm mt-1">{{ stats()!.documents.inReview }} pending review</p>
+              } @else {
+                <p class="text-green-400 text-sm mt-1">All reviewed</p>
+              }
+            </div>
+            <div class="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center">
+              <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- Videos Card -->
+        <div
+          (click)="navigateToContentReview()"
+          class="bg-slate-900/60 rounded-lg border border-slate-800 p-5 hover:border-purple-500/50 transition-colors cursor-pointer"
+        >
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-slate-400 text-sm font-medium">Videos</p>
+              <p class="text-3xl font-bold text-white mt-1">{{ stats()!.videos.total }}</p>
+              @if (stats()!.videos.inReview > 0) {
+                <p class="text-amber-400 text-sm mt-1">{{ stats()!.videos.inReview }} pending review</p>
+              } @else {
+                <p class="text-green-400 text-sm mt-1">All reviewed</p>
+              }
+            </div>
+            <div class="w-12 h-12 bg-purple-500/20 rounded-lg flex items-center justify-center">
+              <svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- Jobs Card -->
+        <div class="bg-slate-900/60 rounded-lg border border-slate-800 p-5">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-slate-400 text-sm font-medium">Active Jobs</p>
+              <p class="text-3xl font-bold text-white mt-1">{{ stats()!.jobs.running + stats()!.jobs.queued }}</p>
+              @if (stats()!.jobs.failedLast24h > 0) {
+                <p class="text-red-400 text-sm mt-1">{{ stats()!.jobs.failedLast24h }} failed (24h)</p>
+              } @else {
+                <p class="text-green-400 text-sm mt-1">No failures</p>
+              }
+            </div>
+            <div class="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center">
+              <svg class="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Left Column: Breaking News -->
+        <div class="lg:col-span-2 space-y-6">
+          <!-- Recent Breaking News -->
+          <div class="bg-slate-900/60 rounded-lg border border-slate-800">
+            <div class="px-5 py-4 border-b border-slate-800 flex items-center justify-between">
+              <h2 class="text-lg font-semibold text-white">Latest Breaking News</h2>
+              <button
+                (click)="navigateToBreakingNews()"
+                class="text-cyan-400 hover:text-cyan-300 text-sm font-medium"
+              >
+                View all
+              </button>
+            </div>
+            <div class="divide-y divide-slate-800">
+              @for (news of stats()!.breakingNews.recent; track news.id) {
+                <div
+                  (click)="navigateToBreakingNews()"
+                  class="px-5 py-4 hover:bg-slate-800/40 transition-colors cursor-pointer"
+                >
+                  <div class="flex items-start justify-between gap-4">
+                    <div class="flex-1 min-w-0">
+                      <p class="text-cyan-400 text-sm font-medium mb-1">&#64;{{ news.account }}</p>
+                      <p class="text-slate-300 text-sm line-clamp-2">{{ news.text }}</p>
+                    </div>
+                    <span class="text-slate-500 text-xs whitespace-nowrap">{{ formatRelativeTime(news.timestamp) }}</span>
+                  </div>
+                </div>
+              } @empty {
+                <div class="px-5 py-8 text-center text-slate-500">No recent breaking news</div>
+              }
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: Stats & Categories -->
+        <div class="space-y-6">
+          <!-- Risk Overview -->
+          <div class="bg-slate-900/60 rounded-lg border border-slate-800 p-5">
+            <h2 class="text-lg font-semibold text-white mb-4">Risk Overview</h2>
+            <div class="space-y-4">
+              <div class="flex items-center justify-between">
+                <span class="text-slate-400 text-sm">Total Enrichments</span>
+                <span class="text-white font-semibold">{{ stats()!.enrichments.total }}</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-slate-400 text-sm">Avg Risk Score</span>
+                <span [class]="getRiskScoreColor(stats()!.enrichments.avgRiskScore)" class="font-semibold">
+                  {{ formatRiskScore(stats()!.enrichments.avgRiskScore) }}
+                </span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-slate-400 text-sm">High Risk Items</span>
+                <span class="text-red-400 font-semibold">{{ stats()!.enrichments.highRiskCount }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Categories -->
+          <div class="bg-slate-900/60 rounded-lg border border-slate-800 p-5">
+            <h2 class="text-lg font-semibold text-white mb-4">Top Categories</h2>
+            <div class="space-y-3">
+              @for (cat of getCategoryEntries(); track cat.name) {
+                <div class="flex items-center justify-between">
+                  <span class="text-slate-300 text-sm truncate">{{ cat.name }}</span>
+                  <span class="text-slate-400 text-sm font-medium">{{ cat.count }}</span>
+                </div>
+              } @empty {
+                <p class="text-slate-500 text-sm">No categories yet</p>
+              }
+            </div>
+          </div>
+
+          <!-- Document Status Breakdown -->
+          <div class="bg-slate-900/60 rounded-lg border border-slate-800 p-5">
+            <h2 class="text-lg font-semibold text-white mb-4">Document Status</h2>
+            <div class="space-y-3">
+              @for (entry of getDocumentStatusEntries(); track entry.status) {
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <span [class]="entry.color" class="w-2 h-2 rounded-full"></span>
+                    <span class="text-slate-300 text-sm">{{ entry.status }}</span>
+                  </div>
+                  <span class="text-slate-400 text-sm font-medium">{{ entry.count }}</span>
+                </div>
+              } @empty {
+                <p class="text-slate-500 text-sm">No documents yet</p>
+              }
+            </div>
+          </div>
+
+          <!-- Video Status Breakdown -->
+          <div class="bg-slate-900/60 rounded-lg border border-slate-800 p-5">
+            <h2 class="text-lg font-semibold text-white mb-4">Video Status</h2>
+            <div class="space-y-3">
+              @for (entry of getVideoStatusEntries(); track entry.status) {
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <span [class]="entry.color" class="w-2 h-2 rounded-full"></span>
+                    <span class="text-slate-300 text-sm">{{ entry.status }}</span>
+                  </div>
+                  <span class="text-slate-400 text-sm font-medium">{{ entry.count }}</span>
+                </div>
+              } @empty {
+                <p class="text-slate-500 text-sm">No videos yet</p>
+              }
+            </div>
+          </div>
+
+          <!-- Quick Actions -->
+          <div class="bg-slate-900/60 rounded-lg border border-slate-800 p-5">
+            <h2 class="text-lg font-semibold text-white mb-4">Quick Actions</h2>
+            <div class="space-y-2">
+              <button
+                (click)="navigateToNewContent()"
+                class="w-full px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center justify-center gap-2"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+                New Document
+              </button>
+              <button
+                (click)="navigateToNewVideo()"
+                class="w-full px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors flex items-center justify-center gap-2"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+                New Video
+              </button>
+              <button
+                (click)="navigateToBreakingNews()"
+                class="w-full px-4 py-2.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors flex items-center justify-center gap-2"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                Breaking News
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+</div>

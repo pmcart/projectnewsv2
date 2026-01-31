@@ -8,9 +8,10 @@ const controller = require('../controllers/breakingNewsController');
 router.use(apiKeyAuth);
 
 router.get('/', controller.listBreakingNews);          // GET /api/breaking-news
-router.get('/:id/enrichment', controller.getBreakingNewsEnrichmentById); // GET /api/breaking-news/:id/enrichment   
+router.get('/search/:jobId/results', controller.getSearchResultsByJobId); // GET /api/breaking-news/search/:jobId/results
+router.get('/:id/enrichment', controller.getBreakingNewsEnrichmentById); // GET /api/breaking-news/:id/enrichment
 router.get('/:id/media', controller.getBreakingNewsMediaById); // GET /api/breaking-news/:id/media
-router.get('/:id/live', controller.listBreakingNewsLive); // GET /api/breaking-news/live
+router.get('/:id/live', controller.listBreakingNewsLive); // GET /api/breaking-news/:id/live
 router.get('/:id', controller.getBreakingNewsById);    // GET /api/breaking-news/:id
 
 module.exports = router;
