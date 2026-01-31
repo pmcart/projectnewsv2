@@ -99,6 +99,7 @@ model User {
   firstName      String
   lastName       String
   role           UserRole      @default(READER)
+  isSuperAdmin   Boolean       @default(false)  // System-wide admin access
   isActive       Boolean       @default(true)
   organizationId Int?
   createdAt      DateTime      @default(now())

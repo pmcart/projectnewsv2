@@ -18,6 +18,7 @@ export interface User {
   firstName: string;
   lastName: string;
   role: 'READER' | 'WRITER' | 'EDITOR';
+  isSuperAdmin: boolean;
   isActive: boolean;
   organizationId?: number;
   organization?: Organization;
@@ -144,6 +145,14 @@ export class AuthService {
 
     const roleHierarchy = { READER: 1, WRITER: 2, EDITOR: 3 };
     return roleHierarchy[user.role] >= roleHierarchy[role];
+  }
+
+  /**
+   * Check if user is a super-admin
+   */
+  isSuperAdmin(): boolean {
+    const user = this.getCurrentUser();
+    return user?.isSuperAdmin === true;
   }
 
   /**

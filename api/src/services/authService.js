@@ -87,6 +87,7 @@ class AuthService {
         email: user.email,
         role: user.role,
         organizationId: user.organizationId,
+        isSuperAdmin: user.isSuperAdmin,
       },
       JWT_SECRET,
       { expiresIn: JWT_EXPIRES_IN }

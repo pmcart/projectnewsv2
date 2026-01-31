@@ -1,0 +1,192 @@
+<!-- Loading State -->
+@if (loading() && !stats()) {
+  <div class="flex items-center justify-center py-24">
+    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-red-500"></div>
+  </div>
+}
+
+<!-- Error State -->
+@else if (error()) {
+  <div class="bg-red-900/20 border border-red-800 rounded-lg p-6 text-center">
+    <p class="text-red-400">{{ error() }}</p>
+    <button
+      (click)="loadStats()"
+      class="mt-4 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition"
+    >
+      Try Again
+    </button>
+  </div>
+}
+
+<!-- Content -->
+@else if (stats(); as s) {
+  <div class="space-y-6">
+    <!-- KPI Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <!-- Organizations -->
+      <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-5">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm text-slate-400">Total Organizations</p>
+            <p class="text-3xl font-bold text-white mt-1">{{ s.organizations.total }}</p>
+          </div>
+          <div class="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center">
+            <lucide-icon [img]="Building2" class="w-6 h-6 text-blue-400"></lucide-icon>
+          </div>
+        </div>
+        <div class="mt-3 flex items-center gap-4 text-xs">
+          <span class="text-emerald-400">{{ s.organizations.active }} active</span>
+          <span class="text-slate-500">{{ s.organizations.inactive }} inactive</span>
+        </div>
+      </div>
+
+      <!-- Users -->
+      <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-5">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm text-slate-400">Total Users</p>
+            <p class="text-3xl font-bold text-white mt-1">{{ s.users.total }}</p>
+          </div>
+          <div class="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center">
+            <lucide-icon [img]="Users" class="w-6 h-6 text-purple-400"></lucide-icon>
+          </div>
+        </div>
+        <div class="mt-3 flex items-center gap-4 text-xs">
+          <span class="text-emerald-400">{{ s.users.active }} active</span>
+          <span class="text-slate-500">{{ s.users.inactive }} inactive</span>
+        </div>
+      </div>
+
+      <!-- Active Users -->
+      <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-5">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm text-slate-400">Active Users</p>
+            <p class="text-3xl font-bold text-white mt-1">{{ s.users.active }}</p>
+          </div>
+          <div class="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+            <lucide-icon [img]="UserCheck" class="w-6 h-6 text-emerald-400"></lucide-icon>
+          </div>
+        </div>
+        <div class="mt-3 text-xs text-slate-400">
+          {{ ((s.users.active / s.users.total) * 100).toFixed(0) }}% of total users
+        </div>
+      </div>
+
+      <!-- Super Admins -->
+      <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-5">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm text-slate-400">Super Admins</p>
+            <p class="text-3xl font-bold text-white mt-1">{{ s.users.superAdmins }}</p>
+          </div>
+          <div class="w-12 h-12 rounded-xl bg-red-500/10 flex items-center justify-center">
+            <lucide-icon [img]="Shield" class="w-6 h-6 text-red-400"></lucide-icon>
+          </div>
+        </div>
+        <div class="mt-3 text-xs text-slate-400">
+          System administrators
+        </div>
+      </div>
+    </div>
+
+    <!-- Users by Role -->
+    <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-5">
+      <h3 class="text-lg font-semibold text-white mb-4">Users by Role</h3>
+      <div class="grid grid-cols-3 gap-4">
+        @for (role of ['READER', 'WRITER', 'EDITOR']; track role) {
+          <div class="bg-slate-800/50 rounded-lg p-4 text-center">
+            <p class="text-2xl font-bold text-white">{{ s.users.byRole[role] || 0 }}</p>
+            <p class="text-sm text-slate-400 mt-1">{{ role }}</p>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <!-- Recent Organizations -->
+      <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-5">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-lg font-semibold text-white">Recent Organizations</h3>
+          <a routerLink="/super-admin/organizations" class="text-sm text-red-400 hover:text-red-300">
+            View All
+          </a>
+        </div>
+        @if (s.recent.organizations.length === 0) {
+          <p class="text-slate-500 text-sm">No organizations yet</p>
+        } @else {
+          <div class="space-y-3">
+            @for (org of s.recent.organizations; track org.id) {
+              <div class="flex items-center justify-between py-2 border-b border-slate-800 last:border-0">
+                <div>
+                  <p class="text-white font-medium">{{ org.name }}</p>
+                  <p class="text-xs text-slate-500">{{ org.slug }}</p>
+                </div>
+                <div class="flex items-center gap-1 text-xs text-slate-400">
+                  <lucide-icon [img]="Clock" class="w-3 h-3"></lucide-icon>
+                  {{ formatDate(org.createdAt) }}
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- Recent Users -->
+      <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-5">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-lg font-semibold text-white">Recent Users</h3>
+          <a routerLink="/super-admin/users" class="text-sm text-red-400 hover:text-red-300">
+            View All
+          </a>
+        </div>
+        @if (s.recent.users.length === 0) {
+          <p class="text-slate-500 text-sm">No users yet</p>
+        } @else {
+          <div class="space-y-3">
+            @for (user of s.recent.users; track user.id) {
+              <div class="flex items-center justify-between py-2 border-b border-slate-800 last:border-0">
+                <div>
+                  <p class="text-white font-medium">{{ user.firstName }} {{ user.lastName }}</p>
+                  <p class="text-xs text-slate-500">
+                    {{ user.email }}
+                    @if (user.organization) {
+                      <span class="text-slate-600"> &bull; </span>
+                      <span class="text-slate-400">{{ user.organization.name }}</span>
+                    }
+                  </p>
+                </div>
+                <div class="flex items-center gap-1 text-xs text-slate-400">
+                  <lucide-icon [img]="Clock" class="w-3 h-3"></lucide-icon>
+                  {{ formatDate(user.createdAt) }}
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-5">
+      <h3 class="text-lg font-semibold text-white mb-4">Quick Actions</h3>
+      <div class="flex flex-wrap gap-3">
+        <a
+          routerLink="/super-admin/organizations"
+          class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition flex items-center gap-2"
+        >
+          <lucide-icon [img]="Building2" class="w-4 h-4"></lucide-icon>
+          Manage Organizations
+        </a>
+        <a
+          routerLink="/super-admin/users"
+          class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition flex items-center gap-2"
+        >
+          <lucide-icon [img]="Users" class="w-4 h-4"></lucide-icon>
+          Manage Users
+        </a>
+      </div>
+    </div>
+  </div>
+}

@@ -10,6 +10,11 @@ import { ContentReviewComponent } from './pages/content-review/content-review';
 import { LiveStreamsComponent } from './pages/live-streams/live-streams';
 import { AlertsComponent } from './pages/alerts/alerts';
 import { authGuard } from './guards/auth.guard';
+import { superAdminGuard } from './guards/super-admin.guard';
+import { SuperAdminLayoutComponent } from './pages/super-admin/super-admin-layout/super-admin-layout';
+import { SuperAdminDashboardComponent } from './pages/super-admin/dashboard/dashboard';
+import { OrganizationsComponent } from './pages/super-admin/organizations/organizations';
+import { UsersComponent } from './pages/super-admin/users/users';
 
 export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'login' },
@@ -91,6 +96,39 @@ export const routes: Routes = [
       // { path: 'articles', component: ArticlesComponent, data: { ... } },
       // { path: 'users', component: UsersComponent, data: { ... } },
       // { path: 'settings', component: SettingsComponent, data: { ... } }
+    ]
+  },
+
+  {
+    path: 'super-admin',
+    component: SuperAdminLayoutComponent,
+    canActivate: [superAdminGuard],
+    children: [
+      { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
+      {
+        path: 'dashboard',
+        component: SuperAdminDashboardComponent,
+        data: {
+          title: 'Dashboard',
+          subtitle: 'System-wide overview and statistics'
+        }
+      },
+      {
+        path: 'organizations',
+        component: OrganizationsComponent,
+        data: {
+          title: 'Organizations',
+          subtitle: 'Manage all organizations in the system'
+        }
+      },
+      {
+        path: 'users',
+        component: UsersComponent,
+        data: {
+          title: 'Users',
+          subtitle: 'Manage all users across organizations'
+        }
+      }
     ]
   },
 

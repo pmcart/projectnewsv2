@@ -103,11 +103,32 @@ function belongsToOrganization(resourceOrgId, userOrgId) {
   return resourceOrgId === userOrgId;
 }
 
+/**
+ * Super-admin authorization middleware
+ * Use after jwtAuth middleware
+ * Requires user to have isSuperAdmin = true
+ */
+function requireSuperAdmin(req, res, next) {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
+  if (!req.user.isSuperAdmin) {
+    return res.status(403).json({
+      error: 'Super-admin access required',
+      message: 'This endpoint is restricted to super-administrators'
+    });
+  }
+
+  next();
+}
+
 module.exports = {
   apiKeyAuth,
   jwtAuth,
   requireAuth,
   requireRole,
   requireOrganization,
-  belongsToOrganization
+  belongsToOrganization,
+  requireSuperAdmin
 };

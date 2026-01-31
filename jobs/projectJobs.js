@@ -4,7 +4,6 @@ require('dotenv').config();
 const path = require('path');
 const {
   runScript,
-  runParallel,
   launchChrome,
   isChromeRunning,
   sleep,
@@ -47,15 +46,16 @@ async function runJobSequence() {
 
   try {
     // Step 1: Run Twitter scraper
-    console.log('\n[Step 1/2] Running Twitter scraper...');
+    console.log('\n[Step 1/3] Running Twitter scraper...');
     await runScript(SCRIPTS.twitterScraper);
 
-    // Step 2: Run enrichment jobs in parallel
-    console.log('\n[Step 2/2] Running enrichment jobs in parallel...');
-    await runParallel([
-      SCRIPTS.enrichBreakingNews,
-      SCRIPTS.getBreakingNewsMedia,
-    ]);
+    // Step 2: Run enrichment
+    console.log('\n[Step 2/3] Running enrichment...');
+    await runScript(SCRIPTS.enrichBreakingNews);
+
+    // Step 3: Run media fetching (depends on enrichment)
+    console.log('\n[Step 3/3] Running media fetching...');
+    await runScript(SCRIPTS.getBreakingNewsMedia);
 
     const duration = Date.now() - startTime;
     console.log('\n' + '-'.repeat(60));
@@ -100,8 +100,8 @@ async function main() {
   console.log(`Schedule: Every ${CONFIG.scheduleIntervalMinutes} minutes`);
   console.log(`Scripts:`);
   console.log(`  - ${path.basename(SCRIPTS.twitterScraper)}`);
-  console.log(`  - ${path.basename(SCRIPTS.enrichBreakingNews)} (parallel)`);
-  console.log(`  - ${path.basename(SCRIPTS.getBreakingNewsMedia)} (parallel)`);
+  console.log(`  - ${path.basename(SCRIPTS.enrichBreakingNews)}`);
+  console.log(`  - ${path.basename(SCRIPTS.getBreakingNewsMedia)} (after enrichment)`);
   console.log();
 
   // Parse command line arguments
