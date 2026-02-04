@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, Input } from '@angular/core';
-import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { DomSanitizer, SafeResourceUrl, SafeUrl } from '@angular/platform-browser';
 
 export interface MediaLink {
   link: string;
@@ -26,6 +26,7 @@ type Provider =
   | 'tiktok'
   | 'instagram'
   | 'x'
+  | 'x-video'  // Direct Twitter/X video files (video.twimg.com)
   | 'facebook'
   | 'reddit'
   | 'vimeo'
@@ -40,6 +41,7 @@ interface EmbedItem {
   snippet?: string;
   domain: string;
   embedUrl?: SafeResourceUrl;
+  directVideoUrl?: SafeUrl;  // For native HTML5 video playback
   embeddable: boolean; // final decision for iframe vs plain link
 }
 
@@ -58,15 +60,30 @@ type InputItem = MediaLink | string | BackendVideo;
         <!-- Provider label + domain -->
         <div class="flex items-center justify-between text-[10px] text-slate-400">
           <span class="uppercase tracking-wide">
-            {{ item.provider === 'unknown' ? 'Link' : (item.provider | titlecase) }}
+            {{ item.provider === 'unknown' ? 'Link' : item.provider === 'x-video' ? 'X Video' : (item.provider | titlecase) }}
           </span>
           <span class="text-slate-500">
             {{ item.domain }}
           </span>
         </div>
 
+        <!-- Direct video player (for Twitter/X videos from video.twimg.com) -->
+        <div *ngIf="item.directVideoUrl" class="w-full">
+          <div class="relative w-full overflow-hidden rounded-lg bg-black">
+            <video
+              class="w-full max-h-[400px]"
+              [src]="item.directVideoUrl"
+              controls
+              playsinline
+              preload="metadata"
+            >
+              Your browser does not support the video tag.
+            </video>
+          </div>
+        </div>
+
         <!-- Embed iframe (for supported providers) -->
-        <div *ngIf="item.embedUrl && item.embeddable; else plainLink" class="w-full">
+        <div *ngIf="!item.directVideoUrl && item.embedUrl && item.embeddable; else plainLink" class="w-full">
           <div class="relative w-full overflow-hidden rounded-lg" style="padding-top: 56.25%;">
             <iframe
               class="absolute top-0 left-0 w-full h-full"
@@ -80,7 +97,7 @@ type InputItem = MediaLink | string | BackendVideo;
 
         <!-- Fallback: plain link/card with rich metadata -->
         <ng-template #plainLink>
-          <div class="rounded-lg border border-slate-700 bg-slate-900/80 px-3 py-2">
+          <div *ngIf="!item.directVideoUrl" class="rounded-lg border border-slate-700 bg-slate-900/80 px-3 py-2">
             <!-- Title (if available) -->
             <div *ngIf="item.title" class="text-xs font-medium text-slate-200 mb-2 line-clamp-2">
               {{ item.title }}
@@ -120,19 +137,33 @@ type InputItem = MediaLink | string | BackendVideo;
   `
 })
 export class MediaEmbedComponent {
-  
+
   embedItems: EmbedItem[] = [];
+
+  // Optional: parent tweet URL for embedding Twitter videos via twitframe
+  // (since direct video.twimg.com URLs are blocked by Twitter's hotlink protection)
+  private _tweetUrl: string | null = null;
+  @Input() set tweetUrl(value: string | null | undefined) {
+    this._tweetUrl = value || null;
+    this.rebuildItems();
+  }
+
+  private _links: InputItem[] = [];
 
   // Accept:
   // - new backend shape: BackendVideo[]
   // - old shape: MediaLink[]
   // - or plain string[]
   @Input() set links(value: InputItem[] | null | undefined) {
-    const rawArray = value || [];
-    this.embedItems = rawArray.map((raw) => this.toEmbedItem(raw));
+    this._links = value || [];
+    this.rebuildItems();
   }
 
   constructor(private sanitizer: DomSanitizer) {}
+
+  private rebuildItems(): void {
+    this.embedItems = this._links.map((raw) => this.toEmbedItem(raw));
+  }
 
   private toEmbedItem(raw: InputItem): EmbedItem {
     // ---- Normalise input: url + displayText + backend metadata ----
@@ -167,8 +198,13 @@ export class MediaEmbedComponent {
     // ---- Provider detection ----
     let provider: Provider = 'unknown';
 
-    // Prefer backend's provider string if present
-    if (backendProvider) {
+    // Check for direct Twitter video URLs first (video.twimg.com)
+    const isDirectTwitterVideo = domain.includes('video.twimg.com') || domain.includes('twimg.com');
+
+    if (isDirectTwitterVideo) {
+      provider = 'x-video';
+    } else if (backendProvider) {
+      // Prefer backend's provider string if present
       const p = backendProvider.toLowerCase();
       if (p === 'twitter') provider = 'x';
       else if (p === 'youtube') provider = 'youtube';
@@ -203,10 +239,20 @@ export class MediaEmbedComponent {
       }
     }
 
-    // ---- Build embed URL (if supported) ----
+    // ---- Build embed URL or direct video URL (if supported) ----
     let embedUrl: SafeResourceUrl | undefined;
+    let directVideoUrl: SafeUrl | undefined;
 
-    if (provider === 'youtube') {
+    // Handle direct video files (Twitter/X videos)
+    // Since video.twimg.com blocks hotlinking, we just link to the original tweet
+    if (provider === 'x-video') {
+      // If we have a tweet URL, use that as the link destination instead of the video URL
+      if (this._tweetUrl) {
+        url = this._tweetUrl;
+        provider = 'x';
+      }
+      // Don't try to embed - just show as a plain link
+    } else if (provider === 'youtube') {
       const id = this.extractYouTubeId(url);
       if (id) {
         embedUrl = this.sanitizer.bypassSecurityTrustResourceUrl(
@@ -254,6 +300,7 @@ export class MediaEmbedComponent {
       snippet,
       domain,
       embedUrl,
+      directVideoUrl,
       embeddable
     };
   }

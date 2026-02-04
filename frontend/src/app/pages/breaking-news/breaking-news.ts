@@ -6,7 +6,6 @@ import {
   BreakingNewsService,
   BreakingNews,
   BreakingNewsEnrichment,
-  BreakingNewsMedia,
   BreakingNewsLiveItem,
   SearchResultItem,
 } from '../../services/breaking-news.service';
@@ -35,9 +34,8 @@ export class BreakingNewsComponent implements OnInit {
   enrichmentLoading = signal(false);
   enrichmentError = signal<string | null>(null);
 
-  media = signal<BreakingNewsMedia | null>(null);
-  mediaLoading = signal(false);
-  mediaError = signal<string | null>(null);
+  // Selected breaking news item (for accessing videos directly)
+  selectedItem = signal<BreakingNews | null>(null);
 
   selectedId = signal<string | null>(null);
 
@@ -70,7 +68,6 @@ export class BreakingNewsComponent implements OnInit {
   private searchResultsPolling$?: Subscription;
   private searchJobPolling$?: Subscription;
   private enrichmentJobPolling$?: Subscription;
-  private mediaJobPolling$?: Subscription;
 
   private readonly breakingNewsService = inject(BreakingNewsService);
   private readonly jobsService = inject(JobsService);
@@ -89,7 +86,13 @@ export class BreakingNewsComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (res) => {
-          this.breakingNews.set(res);
+          // Sort by datetime descending (most recent first)
+          const sorted = [...res].sort((a, b) => {
+            const dateA = a.datetime ? new Date(a.datetime).getTime() : 0;
+            const dateB = b.datetime ? new Date(b.datetime).getTime() : 0;
+            return dateB - dateA;
+          });
+          this.breakingNews.set(sorted);
           this.loading.set(false);
 
           // Auto-select first item if none selected
@@ -108,14 +111,13 @@ export class BreakingNewsComponent implements OnInit {
   openBreakingNewsDetail(tweetId: string) {
     this.selectedId.set(tweetId);
 
-    this.enrichment.set(null);
-    this.media.set(null);
+    // Find and set the selected item from the breaking news list
+    const item = this.breakingNews().find(bn => bn.tweetId === tweetId) || null;
+    this.selectedItem.set(item);
 
+    this.enrichment.set(null);
     this.enrichmentLoading.set(true);
     this.enrichmentError.set(null);
-
-    this.mediaLoading.set(true);
-    this.mediaError.set(null);
 
     // Enrichment
     this.breakingNewsService
@@ -130,22 +132,6 @@ export class BreakingNewsComponent implements OnInit {
           console.error('Failed to load enrichment data for ID', tweetId, err);
           this.enrichmentError.set('Failed to load enrichment details.');
           this.enrichmentLoading.set(false);
-        }
-      });
-
-    // Media
-    this.breakingNewsService
-      .getMediaById(tweetId)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (media) => {
-          this.media.set(media);
-          this.mediaLoading.set(false);
-        },
-        error: (err) => {
-          console.error('Failed to load media data for ID', tweetId, err);
-          this.mediaError.set('Failed to load media details.');
-          this.mediaLoading.set(false);
         }
       });
   }
@@ -278,14 +264,12 @@ export class BreakingNewsComponent implements OnInit {
     this.searchTerm = '';
     this.selectedSearchResult.set(null);
     this.selectedId.set(null);
+    this.selectedItem.set(null);
 
-    // Clear enrichment/media panels
+    // Clear enrichment panel
     this.enrichment.set(null);
-    this.media.set(null);
     this.enrichmentLoading.set(false);
     this.enrichmentError.set(null);
-    this.mediaLoading.set(false);
-    this.mediaError.set(null);
 
     // Stop any running polling
     this.stopSearchPolling();
@@ -298,7 +282,6 @@ export class BreakingNewsComponent implements OnInit {
     this.searchResultsPolling$?.unsubscribe();
     this.searchJobPolling$?.unsubscribe();
     this.enrichmentJobPolling$?.unsubscribe();
-    this.mediaJobPolling$?.unsubscribe();
   }
 
   executeSearch(): void {
@@ -316,13 +299,10 @@ export class BreakingNewsComponent implements OnInit {
     this.selectedSearchResult.set(null);
     this.selectedId.set(null);
 
-    // Clear enrichment/media - show placeholder
+    // Clear enrichment - show placeholder
     this.enrichment.set(null);
-    this.media.set(null);
     this.enrichmentLoading.set(false);
     this.enrichmentError.set(null);
-    this.mediaLoading.set(false);
-    this.mediaError.set(null);
 
     this.searchStage.set('starting');
     this.searchMessage.set('Starting search...');
@@ -413,17 +393,13 @@ export class BreakingNewsComponent implements OnInit {
     this.selectedSearchResult.set(item);
     this.selectedId.set(item.tweetId);
 
-    // Reset enrichment/media state - use main signals
+    // Reset enrichment state
     this.enrichment.set(null);
-    this.media.set(null);
     this.enrichmentLoading.set(true);
     this.enrichmentError.set(null);
-    this.mediaLoading.set(true);
-    this.mediaError.set(null);
 
     // Stop any previous polling
     this.enrichmentJobPolling$?.unsubscribe();
-    this.mediaJobPolling$?.unsubscribe();
 
     const tweetId = item.tweetId;
     const tweetText = item.text || '';
@@ -442,26 +418,7 @@ export class BreakingNewsComponent implements OnInit {
           this.triggerEnrichmentJob(tweetId, tweetText);
         }
       });
-
-    // First, try to fetch existing media
-    this.breakingNewsService
-      .getMediaById(tweetId)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (media) => {
-          if (media) {
-            this.media.set(media);
-            this.mediaLoading.set(false);
-          } else {
-            // Media doesn't exist, trigger on-demand job
-            this.triggerMediaJob(tweetId, tweetText);
-          }
-        },
-        error: () => {
-          // Media doesn't exist, trigger on-demand job
-          this.triggerMediaJob(tweetId, tweetText);
-        }
-      });
+    // Videos are displayed directly from the search result item (item.videos)
   }
 
   private triggerEnrichmentJob(tweetId: string, tweetText: string): void {
@@ -476,22 +433,6 @@ export class BreakingNewsComponent implements OnInit {
           console.error('Failed to trigger enrichment job', err);
           this.enrichmentError.set('Failed to load enrichment.');
           this.enrichmentLoading.set(false);
-        }
-      });
-  }
-
-  private triggerMediaJob(tweetId: string, tweetText: string): void {
-    this.jobsService
-      .createSingleMediaJob(tweetId, tweetText)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: ({ jobId }) => {
-          this.pollMediaJob(jobId, tweetId);
-        },
-        error: (err) => {
-          console.error('Failed to trigger media job', err);
-          this.mediaError.set('Failed to load media.');
-          this.mediaLoading.set(false);
         }
       });
   }
@@ -532,46 +473,6 @@ export class BreakingNewsComponent implements OnInit {
           completed = true;
           this.enrichmentError.set('Enrichment job failed.');
           this.enrichmentLoading.set(false);
-        }
-      });
-  }
-
-  private pollMediaJob(jobId: string, tweetId: string): void {
-    let completed = false;
-
-    this.mediaJobPolling$ = timer(0, 1500)
-      .pipe(
-        takeUntilDestroyed(this.destroyRef),
-        takeWhile(() => !completed),
-        switchMap(() =>
-          this.jobsService.getJob(jobId).pipe(
-            catchError(() => of(null as unknown as JobRecord))
-          )
-        )
-      )
-      .subscribe((job) => {
-        if (!job) return;
-
-        if (job.status === 'succeeded') {
-          completed = true;
-          // Fetch the media data
-          this.breakingNewsService
-            .getMediaById(tweetId)
-            .pipe(takeUntilDestroyed(this.destroyRef))
-            .subscribe({
-              next: (media) => {
-                this.media.set(media);
-                this.mediaLoading.set(false);
-              },
-              error: () => {
-                this.mediaError.set('Failed to load media.');
-                this.mediaLoading.set(false);
-              }
-            });
-        } else if (job.status === 'failed') {
-          completed = true;
-          this.mediaError.set('Media job failed.');
-          this.mediaLoading.set(false);
         }
       });
   }

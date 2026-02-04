@@ -21,7 +21,6 @@ const CONFIG = {
 const SCRIPTS = {
   twitterScraper: path.join(__dirname, 'twitterscraper.mjs'),
   enrichBreakingNews: path.join(__dirname, 'enrichbreakingnews.mjs'),
-  getBreakingNewsMedia: path.join(__dirname, 'getbreakingnewsmedia.js'),
 };
 
 let isRunning = false;
@@ -46,16 +45,12 @@ async function runJobSequence() {
 
   try {
     // Step 1: Run Twitter scraper
-    console.log('\n[Step 1/3] Running Twitter scraper...');
+    console.log('\n[Step 1/2] Running Twitter scraper...');
     await runScript(SCRIPTS.twitterScraper);
 
     // Step 2: Run enrichment
-    console.log('\n[Step 2/3] Running enrichment...');
+    console.log('\n[Step 2/2] Running enrichment...');
     await runScript(SCRIPTS.enrichBreakingNews);
-
-    // Step 3: Run media fetching (depends on enrichment)
-    console.log('\n[Step 3/3] Running media fetching...');
-    await runScript(SCRIPTS.getBreakingNewsMedia);
 
     const duration = Date.now() - startTime;
     console.log('\n' + '-'.repeat(60));
@@ -101,7 +96,6 @@ async function main() {
   console.log(`Scripts:`);
   console.log(`  - ${path.basename(SCRIPTS.twitterScraper)}`);
   console.log(`  - ${path.basename(SCRIPTS.enrichBreakingNews)}`);
-  console.log(`  - ${path.basename(SCRIPTS.getBreakingNewsMedia)} (after enrichment)`);
   console.log();
 
   // Parse command line arguments

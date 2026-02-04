@@ -167,16 +167,29 @@
       <div *ngIf="!searchMode() || selectedSearchResult()" class="rounded-2xl border border-slate-800 bg-slate-900 p-3">
         <div class="text-sm font-semibold mb-2">Media</div>
 
-        <div *ngIf="mediaLoading()" class="text-xs text-slate-400">Loading media…</div>
-        <div *ngIf="mediaError()" class="text-xs text-red-400">{{ mediaError() }}</div>
+        <!-- Normal mode: show videos from selected breaking news item -->
+        <ng-container *ngIf="!searchMode() && selectedItem() as item">
+          <app-media-embed
+            *ngIf="item.videos?.length"
+            [links]="item.videos"
+            [tweetUrl]="'https://x.com/' + item.account + '/status/' + item.tweetId">
+          </app-media-embed>
+          <div *ngIf="!item.videos?.length" class="text-xs text-slate-500">
+            No media available.
+          </div>
+        </ng-container>
 
-        <div *ngIf="!mediaLoading() && media() as m">
-          <app-media-embed [links]="m.video_links"></app-media-embed>
-        </div>
-
-        <div *ngIf="!mediaLoading() && !media() && !mediaError()" class="text-xs text-slate-500">
-          No media available.
-        </div>
+        <!-- Search mode: show videos from selected search result -->
+        <ng-container *ngIf="searchMode() && selectedSearchResult() as result">
+          <app-media-embed
+            *ngIf="result.videos?.length"
+            [links]="result.videos"
+            [tweetUrl]="result.url">
+          </app-media-embed>
+          <div *ngIf="!result.videos?.length" class="text-xs text-slate-500">
+            No media available.
+          </div>
+        </ng-container>
       </div>
     </div>
   </div>

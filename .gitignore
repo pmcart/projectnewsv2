@@ -23,6 +23,7 @@ Thumbs.db
 # Env files
 .env
 .env.*
+!.env.example
 *.local
 
 # IDE / editor
