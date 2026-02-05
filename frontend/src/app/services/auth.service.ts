@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { BehaviorSubject, Observable, tap } from 'rxjs';
 import { Router } from '@angular/router';
+import { environment } from '../../environments/environment';
 
 export interface Organization {
   id: number;
@@ -45,7 +46,7 @@ export interface RegisterData {
   providedIn: 'root'
 })
 export class AuthService {
-  private readonly API_URL = 'http://localhost:4000/api/auth';
+  private readonly API_URL = `${environment.apiBaseUrl}/auth`;
   private readonly TOKEN_KEY = 'auth_token';
   private readonly USER_KEY = 'auth_user';
 
@@ -93,10 +94,12 @@ export class AuthService {
   }
 
   /**
-   * Check if user is logged in
+   * Check if user is logged in (token exists and is not expired)
    */
   isLoggedIn(): boolean {
-    return !!this.getToken();
+    const token = this.getToken();
+    if (!token) return false;
+    return !this.isTokenExpired(token);
   }
 
   /**
@@ -148,11 +151,13 @@ export class AuthService {
   }
 
   /**
-   * Check if user is a super-admin
+   * Check if user is a super-admin using JWT claims (not the editable localStorage user object)
    */
   isSuperAdmin(): boolean {
-    const user = this.getCurrentUser();
-    return user?.isSuperAdmin === true;
+    const token = this.getToken();
+    if (!token) return false;
+    const claims = this.decodeToken(token);
+    return claims?.isSuperAdmin === true;
   }
 
   /**
@@ -162,6 +167,27 @@ export class AuthService {
     localStorage.setItem(this.TOKEN_KEY, token);
     localStorage.setItem(this.USER_KEY, JSON.stringify(user));
     this.currentUserSubject.next(user);
+  }
+
+  /**
+   * Decode JWT payload without verification (verification is done server-side)
+   */
+  private decodeToken(token: string): any {
+    try {
+      const payload = token.split('.')[1];
+      return JSON.parse(atob(payload));
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Check if a JWT token is expired
+   */
+  private isTokenExpired(token: string): boolean {
+    const decoded = this.decodeToken(token);
+    if (!decoded || !decoded.exp) return true;
+    return decoded.exp * 1000 < Date.now();
   }
 
   /**

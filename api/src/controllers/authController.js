@@ -8,7 +8,7 @@ class AuthController {
    */
   async register(req, res) {
     try {
-      const { email, password, firstName, lastName, role } = req.body;
+      const { email, password, firstName, lastName } = req.body;
 
       // Validate required fields
       if (!email || !password || !firstName || !lastName) {
@@ -24,28 +24,26 @@ class AuthController {
         return res.status(400).json({ error: 'Invalid email format' });
       }
 
-      // Validate password strength
-      if (password.length < 6) {
+      // Validate password strength: min 8 chars, must include uppercase, lowercase, and number
+      if (password.length < 8) {
         return res.status(400).json({
-          error: 'Password must be at least 6 characters long'
+          error: 'Password must be at least 8 characters long'
+        });
+      }
+      if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password)) {
+        return res.status(400).json({
+          error: 'Password must contain at least one uppercase letter, one lowercase letter, and one number'
         });
       }
 
-      // Validate role if provided
-      const validRoles = ['READER', 'WRITER', 'EDITOR'];
-      if (role && !validRoles.includes(role)) {
-        return res.status(400).json({
-          error: 'Invalid role',
-          validRoles
-        });
-      }
-
+      // Self-registration always creates READER with no org assignment.
+      // Only super-admins can assign roles/orgs via /api/super-admin/users.
       const user = await authService.register({
         email,
         password,
         firstName,
         lastName,
-        role
+        role: 'READER'
       });
 
       res.status(201).json({

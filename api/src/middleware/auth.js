@@ -1,5 +1,6 @@
 // src/middleware/auth.js
 const authService = require('../services/authService');
+const prisma = require('../config/prisma');
 
 /**
  * API Key authentication middleware (existing)
@@ -35,11 +36,36 @@ async function jwtAuth(req, res, next) {
 
     const token = authHeader.substring(7); // Remove "Bearer " prefix
 
-    // Verify token and get user data
+    // Verify token signature and expiry
     const decoded = await authService.verifyToken(token);
 
-    // Attach user data to request object
-    req.user = decoded;
+    // Re-validate user against database on every request.
+    // This ensures deactivated users and changed roles are caught immediately,
+    // not after the JWT expires (up to 7 days).
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        organizationId: true,
+        isSuperAdmin: true,
+        isActive: true
+      }
+    });
+
+    if (!user || !user.isActive) {
+      return res.status(401).json({ error: 'Account is inactive or does not exist' });
+    }
+
+    // Use fresh data from DB, not stale JWT claims
+    req.user = {
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+      organizationId: user.organizationId,
+      isSuperAdmin: user.isSuperAdmin
+    };
 
     next();
   } catch (error) {

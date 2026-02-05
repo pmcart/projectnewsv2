@@ -10,6 +10,7 @@ export const authGuard = () => {
     return true;
   }
 
-  // Redirect to login if not authenticated
+  // Clear any stale/expired session data before redirecting
+  authService.logout();
   return router.createUrlTree(['/login']);
 };

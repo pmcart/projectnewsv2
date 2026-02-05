@@ -97,7 +97,8 @@ class DocumentController {
   async getVersion(req, res, next) {
     try {
       const { versionId } = req.params;
-      const version = await documentService.getVersionById(versionId);
+      const organizationId = req.user.organizationId;
+      const version = await documentService.getVersionById(versionId, organizationId);
 
       res.json(version);
     } catch (error) {
@@ -263,8 +264,8 @@ class DocumentController {
       const organizationId = req.user.organizationId;
       const { notes } = req.body;
 
-      // Only EDITOR or WRITER can approve
-      if (req.user.role === 'READER') {
+      // Only EDITORs can approve
+      if (req.user.role !== 'EDITOR') {
         return res.status(403).json({
           error: 'Only editors can approve documents',
         });
@@ -292,8 +293,8 @@ class DocumentController {
       const organizationId = req.user.organizationId;
       const { notes, htmlContent } = req.body;
 
-      // Only EDITOR or WRITER can reject
-      if (req.user.role === 'READER') {
+      // Only EDITORs can reject
+      if (req.user.role !== 'EDITOR') {
         return res.status(403).json({
           error: 'Only editors can reject documents',
         });

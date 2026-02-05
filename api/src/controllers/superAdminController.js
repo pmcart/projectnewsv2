@@ -201,10 +201,15 @@ class SuperAdminController {
         return res.status(400).json({ error: 'Invalid email format' });
       }
 
-      // Validate password length
-      if (password.length < 6) {
+      // Validate password strength: min 8 chars, must include uppercase, lowercase, and number
+      if (password.length < 8) {
         return res.status(400).json({
-          error: 'Password must be at least 6 characters long'
+          error: 'Password must be at least 8 characters long'
+        });
+      }
+      if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password)) {
+        return res.status(400).json({
+          error: 'Password must contain at least one uppercase letter, one lowercase letter, and one number'
         });
       }
 
@@ -263,11 +268,18 @@ class SuperAdminController {
         }
       }
 
-      // Validate password length if provided
-      if (password && password.length < 6) {
-        return res.status(400).json({
-          error: 'Password must be at least 6 characters long'
-        });
+      // Validate password strength if provided
+      if (password) {
+        if (password.length < 8) {
+          return res.status(400).json({
+            error: 'Password must be at least 8 characters long'
+          });
+        }
+        if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password)) {
+          return res.status(400).json({
+            error: 'Password must contain at least one uppercase letter, one lowercase letter, and one number'
+          });
+        }
       }
 
       // Validate role if provided

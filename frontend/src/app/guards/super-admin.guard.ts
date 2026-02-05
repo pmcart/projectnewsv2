@@ -6,16 +6,16 @@ export const superAdminGuard = () => {
   const authService = inject(AuthService);
   const router = inject(Router);
 
-  // Check if logged in and is super-admin
-  if (authService.isLoggedIn() && authService.isSuperAdmin()) {
+  if (!authService.isLoggedIn()) {
+    authService.logout();
+    return router.createUrlTree(['/login']);
+  }
+
+  // isSuperAdmin() now reads from signed JWT claims, not the editable localStorage user object
+  if (authService.isSuperAdmin()) {
     return true;
   }
 
-  // If logged in but not super-admin, redirect to regular admin dashboard
-  if (authService.isLoggedIn()) {
-    return router.createUrlTree(['/admin/dashboard']);
-  }
-
-  // Not logged in, redirect to login
-  return router.createUrlTree(['/login']);
+  // Logged in but not super-admin
+  return router.createUrlTree(['/admin/dashboard']);
 };

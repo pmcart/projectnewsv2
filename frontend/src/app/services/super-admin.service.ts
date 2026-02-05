@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Organization, User } from './auth.service';
+import { environment } from '../../environments/environment';
 
 // ==================== INTERFACES ====================
 
@@ -121,7 +122,7 @@ export interface UserFilters {
   providedIn: 'root'
 })
 export class SuperAdminService {
-  private readonly API_URL = 'http://localhost:4000/api/super-admin';
+  private readonly API_URL = `${environment.apiBaseUrl}/super-admin`;
   private readonly http = inject(HttpClient);
 
   // ==================== ORGANIZATION METHODS ====================

@@ -214,10 +214,13 @@ class DocumentService {
    * @param {string} versionId
    * @returns {Promise<Object>}
    */
-  async getVersionById(versionId) {
+  async getVersionById(versionId, organizationId = null) {
     const version = await prisma.documentVersion.findUnique({
       where: { id: versionId },
       include: {
+        document: {
+          select: { organizationId: true }
+        },
         createdBy: {
           select: {
             id: true,
@@ -232,7 +235,14 @@ class DocumentService {
       throw new Error('Version not found');
     }
 
-    return version;
+    // Validate organization access if organizationId is provided
+    if (organizationId !== null && version.document.organizationId !== organizationId) {
+      throw new Error('Access denied: Version belongs to a different organization');
+    }
+
+    // Remove internal join data from the response
+    const { document: _, ...versionData } = version;
+    return versionData;
   }
 
   /**

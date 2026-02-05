@@ -3,6 +3,12 @@ const prisma = require('../src/config/prisma');
 const bcrypt = require('bcryptjs');
 
 async function main() {
+  // Refuse to seed in production to prevent test accounts with weak passwords
+  if (process.env.NODE_ENV === 'production') {
+    console.error('Seeding is disabled in production. Aborting.');
+    process.exit(1);
+  }
+
   console.log('🌱 Seeding database...\n');
 
   // Create test organizations

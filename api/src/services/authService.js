@@ -2,8 +2,16 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const prisma = require('../config/prisma');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-this';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error('FATAL: JWT_SECRET environment variable is not set. Refusing to start.');
+}
 const JWT_EXPIRES_IN = '7d'; // 7 days as per user preference
+
+// In-memory login attempt tracking (per email)
+const MAX_FAILED_ATTEMPTS = 5;
+const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutes
+const loginAttempts = new Map(); // email -> { count, lockedUntil }
 
 class AuthService {
   /**
@@ -57,15 +65,25 @@ class AuthService {
    * @returns {Promise<Object>} User data and JWT token
    */
   async login(email, password) {
+    const normalizedEmail = email.toLowerCase();
+
+    // Check if account is locked out
+    const attempts = loginAttempts.get(normalizedEmail);
+    if (attempts && attempts.lockedUntil && Date.now() < attempts.lockedUntil) {
+      const minutesLeft = Math.ceil((attempts.lockedUntil - Date.now()) / 60000);
+      throw new Error(`Account temporarily locked. Try again in ${minutesLeft} minute(s).`);
+    }
+
     // Find user by email with organization
     const user = await prisma.user.findUnique({
-      where: { email: email.toLowerCase() },
+      where: { email: normalizedEmail },
       include: {
         organization: true,
       },
     });
 
     if (!user) {
+      this._recordFailedAttempt(normalizedEmail);
       throw new Error('Invalid email or password');
     }
 
@@ -77,8 +95,12 @@ class AuthService {
     // Verify password
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
+      this._recordFailedAttempt(normalizedEmail);
       throw new Error('Invalid email or password');
     }
+
+    // Successful login - clear failed attempts
+    loginAttempts.delete(normalizedEmail);
 
     // Generate JWT token
     const token = jwt.sign(
@@ -100,6 +122,21 @@ class AuthService {
       user: userWithoutPassword,
       token,
     };
+  }
+
+  /**
+   * Record a failed login attempt and lock account if threshold exceeded
+   */
+  _recordFailedAttempt(email) {
+    const attempts = loginAttempts.get(email) || { count: 0, lockedUntil: null };
+    attempts.count += 1;
+
+    if (attempts.count >= MAX_FAILED_ATTEMPTS) {
+      attempts.lockedUntil = Date.now() + LOCKOUT_DURATION_MS;
+      attempts.count = 0; // reset count for next lockout window
+    }
+
+    loginAttempts.set(email, attempts);
   }
 
   /**
