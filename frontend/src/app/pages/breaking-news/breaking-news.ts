@@ -12,6 +12,7 @@ import {
 import { MediaEmbedComponent } from '../../shared/components/media-embed/media-embed.component';
 import { NewContentButtonComponent } from '../../shared/components/new-content-button/new-content-button.component';
 import { NewVideoButtonComponent } from '../../shared/components/new-video-button/new-video-button.component';
+import { GenerateTimelineButtonComponent } from '../../shared/components/generate-timeline-button/generate-timeline-button.component';
 import { EnrichmentViewComponent } from '../../shared/components/enrichment-view/enrichment-view.component';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
@@ -22,7 +23,7 @@ import { catchError, switchMap, tap, takeWhile } from 'rxjs/operators';
 @Component({
   selector: 'app-breaking-news',
   standalone: true,
-  imports: [CommonModule, FormsModule, MediaEmbedComponent, NewContentButtonComponent, NewVideoButtonComponent, EnrichmentViewComponent],
+  imports: [CommonModule, FormsModule, MediaEmbedComponent, NewContentButtonComponent, NewVideoButtonComponent, GenerateTimelineButtonComponent, EnrichmentViewComponent],
   templateUrl: './breaking-news.html'
 })
 export class BreakingNewsComponent implements OnInit {

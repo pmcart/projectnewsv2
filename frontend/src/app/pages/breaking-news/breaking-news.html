@@ -17,6 +17,12 @@
         [itemType]="'breaking-news'">
       </app-new-video-button>
 
+      <app-generate-timeline-button
+        [itemId]="selectedId()"
+        [itemText]="selectedItem()?.text"
+        [itemAccount]="selectedItem()?.account">
+      </app-generate-timeline-button>
+
       <button
         type="button"
         (click)="openLiveFeedModal(); startLiveFeed()"

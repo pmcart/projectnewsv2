@@ -75,6 +75,22 @@ enum AssetGenerationStatus {
   FAILED
 }
 
+enum TimelineStatus {
+  DRAFT
+  GENERATING
+  GENERATED
+  FAILED
+}
+
+enum TimelineEventCategory {
+  INCIDENT
+  SIGNAL
+  PATTERN
+  RESPONSE
+  ESCALATION
+  CONTEXT
+}
+
 
 model Organization {
   id        Int      @id @default(autoincrement())
@@ -88,6 +104,7 @@ model Organization {
   users     User[]
   documents Document[]
   videos    Video[]
+  timelines Timeline[]
 
   @@map("organizations")
 }
@@ -113,6 +130,8 @@ model User {
   auditLogs      AuditLog[]          @relation("AuditActor")
   videos         Video[]             @relation("VideoOwner")
   videoReviews   VideoReviewEvent[]  @relation("VideoReviewActor")
+  timelines      Timeline[]          @relation("TimelineOwner")
+  timelineNotes  TimelineNote[]      @relation("TimelineNoteAuthor")
 
   @@map("users")
 }
@@ -331,4 +350,67 @@ model VideoAudio {
   @@index([videoId])
   @@index([sceneNumber])
   @@map("video_audio")
+}
+
+model Timeline {
+  id             String         @id @default(uuid())
+  title          String
+  status         TimelineStatus @default(DRAFT)
+  ownerUserId    Int
+  organizationId Int
+  sourceTweetId  String
+  sourceText     String         @db.Text
+  sourceAccount  String?
+  llmMetadata    Json?
+  errorMessage   String?        @db.Text
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  // Relations
+  owner          User           @relation("TimelineOwner", fields: [ownerUserId], references: [id])
+  organization   Organization   @relation(fields: [organizationId], references: [id])
+  events         TimelineEvent[]
+
+  @@index([organizationId])
+  @@index([ownerUserId])
+  @@index([createdAt(sort: Desc)])
+  @@map("timelines")
+}
+
+model TimelineEvent {
+  id            String                @id @default(uuid())
+  timelineId    String
+  sortOrder     Int
+  eventDate     String
+  title         String
+  description   String                @db.Text
+  category      TimelineEventCategory @default(INCIDENT)
+  significance  Int                   @default(3)
+  sources       Json?
+
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+
+  // Relations
+  timeline      Timeline              @relation(fields: [timelineId], references: [id], onDelete: Cascade)
+  notes         TimelineNote[]
+
+  @@index([timelineId])
+  @@map("timeline_events")
+}
+
+model TimelineNote {
+  id              String        @id @default(uuid())
+  timelineEventId String
+  content         String        @db.Text
+  createdByUserId Int
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  // Relations
+  timelineEvent   TimelineEvent @relation(fields: [timelineEventId], references: [id], onDelete: Cascade)
+  createdBy       User          @relation("TimelineNoteAuthor", fields: [createdByUserId], references: [id])
+
+  @@index([timelineEventId])
+  @@map("timeline_notes")
 }

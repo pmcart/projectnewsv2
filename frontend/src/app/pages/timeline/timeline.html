@@ -1,0 +1,308 @@
+<!-- src/app/pages/timeline/timeline.html -->
+<div class="p-3">
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-4">
+    <div class="flex items-center gap-3">
+      <button
+        type="button"
+        (click)="goBack()"
+        class="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 hover:bg-slate-700 border border-slate-700 transition-colors"
+      >
+        &larr; Back
+      </button>
+      <div>
+        <h2 class="text-sm font-semibold text-slate-100">
+          {{ timeline()?.title || 'Timeline' }}
+        </h2>
+        <p *ngIf="timeline()?.sourceAccount" class="text-[11px] text-slate-400 mt-0.5">
+          Source: {{ timeline()?.sourceAccount }}
+        </p>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <!-- Status badge -->
+      <span
+        *ngIf="timeline()?.status === 'GENERATING'"
+        class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-amber-600/20 text-amber-400 border border-amber-600/30"
+      >
+        <span class="inline-block h-2 w-2 rounded-full border-2 border-amber-400/30 border-t-amber-400 animate-spin"></span>
+        Generating
+      </span>
+      <span
+        *ngIf="timeline()?.status === 'GENERATED'"
+        class="px-2.5 py-1 rounded-full text-[11px] font-medium bg-emerald-600/20 text-emerald-400 border border-emerald-600/30"
+      >
+        Generated
+      </span>
+      <span
+        *ngIf="timeline()?.status === 'FAILED'"
+        class="px-2.5 py-1 rounded-full text-[11px] font-medium bg-red-600/20 text-red-400 border border-red-600/30"
+      >
+        Failed
+      </span>
+    </div>
+  </div>
+
+  <!-- Initial loading state -->
+  <div *ngIf="loading() && !timeline()" class="flex items-center justify-center py-16">
+    <div class="text-center">
+      <span class="inline-block h-6 w-6 rounded-full border-2 border-slate-500 border-t-sky-400 animate-spin mb-3"></span>
+      <p class="text-xs text-slate-400">Loading timeline...</p>
+    </div>
+  </div>
+
+  <!-- Error state -->
+  <div *ngIf="error()" class="rounded-2xl border border-red-800/40 bg-red-900/20 p-6 text-center">
+    <p class="text-sm text-red-400">{{ error() }}</p>
+    <button
+      type="button"
+      (click)="goBack()"
+      class="mt-3 px-3 py-1.5 rounded-lg text-xs bg-slate-800 hover:bg-slate-700 border border-slate-700"
+    >
+      Go back
+    </button>
+  </div>
+
+  <!-- GENERATING STATE: Skeleton loader -->
+  <div *ngIf="timeline()?.status === 'GENERATING' || timeline()?.status === 'DRAFT'" class="relative">
+    <!-- Status message -->
+    <div class="flex items-center justify-center gap-3 mb-8">
+      <span class="inline-block h-5 w-5 rounded-full border-2 border-slate-500 border-t-amber-400 animate-spin"></span>
+      <span class="text-sm text-slate-300">Generating timeline with AI...</span>
+    </div>
+
+    <!-- Skeleton timeline -->
+    <div class="relative max-w-4xl mx-auto">
+      <!-- Center line -->
+      <div class="absolute left-4 lg:left-1/2 top-0 bottom-0 w-0.5 bg-slate-700/50 lg:transform lg:-translate-x-1/2 timeline-skeleton-pulse"></div>
+
+      <div class="space-y-8">
+        <div *ngFor="let item of skeletonItems; let i = index; let odd = odd"
+             class="relative flex"
+             [class.lg:flex-row]="!odd"
+             [class.lg:flex-row-reverse]="odd">
+          <!-- Card skeleton -->
+          <div class="ml-10 lg:ml-0 lg:w-5/12 w-full" [class.lg:pr-8]="!odd" [class.lg:pl-8]="odd">
+            <div class="rounded-xl border border-slate-700/30 bg-slate-800/30 p-4 timeline-skeleton-pulse"
+                 [style.animation-delay]="i * 200 + 'ms'">
+              <div class="h-3 w-20 bg-slate-700/50 rounded mb-2"></div>
+              <div class="flex gap-2 mb-3">
+                <div class="h-4 w-14 bg-slate-700/50 rounded-full"></div>
+                <div class="h-4 w-10 bg-slate-700/50 rounded-full"></div>
+              </div>
+              <div class="h-4 w-3/4 bg-slate-700/50 rounded mb-2"></div>
+              <div class="space-y-1.5">
+                <div class="h-3 w-full bg-slate-700/30 rounded"></div>
+                <div class="h-3 w-5/6 bg-slate-700/30 rounded"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Dot -->
+          <div class="absolute left-4 lg:left-1/2 top-4 transform -translate-x-1/2 z-10">
+            <div class="w-3 h-3 rounded-full bg-slate-600 timeline-skeleton-pulse"
+                 [style.animation-delay]="i * 200 + 'ms'"></div>
+          </div>
+
+          <!-- Spacer -->
+          <div class="hidden lg:block lg:w-5/12"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FAILED STATE -->
+  <div *ngIf="timeline()?.status === 'FAILED'" class="rounded-2xl border border-red-800/40 bg-red-900/10 p-6 text-center max-w-lg mx-auto">
+    <div class="text-red-400 text-sm mb-2">Timeline generation failed</div>
+    <p *ngIf="timeline()?.errorMessage" class="text-xs text-slate-400 mb-4">{{ timeline()?.errorMessage }}</p>
+    <button
+      type="button"
+      (click)="goBack()"
+      class="px-3 py-1.5 rounded-lg text-xs bg-slate-800 hover:bg-slate-700 border border-slate-700"
+    >
+      Go back
+    </button>
+  </div>
+
+  <!-- GENERATED STATE: Full timeline -->
+  <div *ngIf="timeline()?.status === 'GENERATED'" class="relative max-w-4xl mx-auto">
+    <!-- Category legend -->
+    <div class="flex flex-wrap gap-2 mb-8 justify-center">
+      <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-medium border bg-red-600/10 text-red-400 border-red-600/30">
+        <span class="w-2 h-2 rounded-full bg-red-500"></span> Incident
+      </span>
+      <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-medium border bg-amber-500/10 text-amber-400 border-amber-500/30">
+        <span class="w-2 h-2 rounded-full bg-amber-500"></span> Signal
+      </span>
+      <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-medium border bg-purple-600/10 text-purple-400 border-purple-600/30">
+        <span class="w-2 h-2 rounded-full bg-purple-500"></span> Pattern
+      </span>
+      <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-medium border bg-blue-600/10 text-blue-400 border-blue-600/30">
+        <span class="w-2 h-2 rounded-full bg-blue-500"></span> Response
+      </span>
+      <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-medium border bg-orange-500/10 text-orange-400 border-orange-500/30">
+        <span class="w-2 h-2 rounded-full bg-orange-500"></span> Escalation
+      </span>
+      <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-medium border bg-slate-500/10 text-slate-400 border-slate-500/30">
+        <span class="w-2 h-2 rounded-full bg-slate-500"></span> Context
+      </span>
+    </div>
+
+    <!-- Central vertical line -->
+    <div class="absolute left-4 lg:left-1/2 top-0 bottom-0 w-0.5 bg-gradient-to-b from-transparent via-slate-600 to-transparent lg:transform lg:-translate-x-1/2 timeline-line-glow"></div>
+
+    <!-- Timeline events -->
+    <div class="space-y-6 lg:space-y-8 pb-8">
+      <div
+        *ngFor="let event of timeline()?.events; let i = index; let odd = odd"
+        class="relative flex timeline-event-enter"
+        [class.lg:flex-row]="!odd"
+        [class.lg:flex-row-reverse]="odd"
+        [style.animation-delay]="i * 100 + 'ms'"
+      >
+        <!-- Event card -->
+        <div class="ml-10 lg:ml-0 lg:w-5/12 w-full" [class.lg:pr-8]="!odd" [class.lg:pl-8]="odd">
+          <div
+            class="relative rounded-xl p-4 bg-slate-900/80 backdrop-blur cursor-pointer transition-all duration-300"
+            [class]="getCategoryBorderColor(event.category) + ' ' + getSignificanceBorder(event.significance) + ' ' + getCategoryGlowClass(event.category)"
+            (click)="toggleEvent(event.id)"
+          >
+            <!-- Note count badge (when collapsed) -->
+            <div
+              *ngIf="!isExpanded(event.id) && event.notes?.length"
+              class="absolute top-2 right-2 w-5 h-5 rounded-full bg-sky-600 text-white text-[10px] flex items-center justify-center font-medium"
+            >
+              {{ event.notes.length }}
+            </div>
+
+            <!-- Date -->
+            <div class="text-[11px] text-slate-400 mb-1.5 font-mono">{{ event.eventDate }}</div>
+
+            <!-- Category + Significance -->
+            <div class="flex items-center gap-2 mb-2">
+              <span
+                class="text-[10px] px-1.5 py-0.5 rounded-full border font-medium"
+                [class]="getCategoryColor(event.category)"
+              >
+                {{ getCategoryLabel(event.category) }}
+              </span>
+              <span class="inline-flex gap-0.5">
+                <span
+                  *ngFor="let s of significanceArray"
+                  class="inline-block w-1.5 h-1.5 rounded-full"
+                  [class.bg-amber-400]="s <= event.significance"
+                  [class.bg-slate-700]="s > event.significance"
+                ></span>
+              </span>
+            </div>
+
+            <!-- Title -->
+            <h3 class="text-sm font-semibold text-slate-100 leading-snug">{{ event.title }}</h3>
+
+            <!-- Description (collapsed: 2 lines, expanded: full) -->
+            <p
+              class="text-xs text-slate-300/80 mt-1.5 leading-relaxed"
+              [class.line-clamp-2]="!isExpanded(event.id)"
+            >
+              {{ event.description }}
+            </p>
+
+            <!-- Expanded details -->
+            <div *ngIf="isExpanded(event.id)" class="mt-3 space-y-3">
+              <!-- Sources -->
+              <div *ngIf="event.sources?.length" class="text-xs">
+                <span class="text-slate-500 font-medium">Sources:</span>
+                <div class="mt-1 space-y-1">
+                  <div *ngFor="let source of event.sources">
+                    <a
+                      *ngIf="source.url"
+                      [href]="source.url"
+                      target="_blank"
+                      rel="noreferrer"
+                      class="text-sky-400 hover:text-sky-300 hover:underline"
+                    >{{ source.title }}</a>
+                    <span *ngIf="!source.url" class="text-slate-400">{{ source.title }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Notes section -->
+              <div class="border-t border-slate-700/50 pt-3">
+                <div class="flex items-center justify-between mb-2">
+                  <span class="text-xs text-slate-400 font-medium">
+                    Notes ({{ event.notes?.length || 0 }})
+                  </span>
+                  <button
+                    type="button"
+                    (click)="openNoteForm(event.id); $event.stopPropagation()"
+                    class="text-xs text-sky-400 hover:text-sky-300 transition-colors"
+                  >
+                    + Add note
+                  </button>
+                </div>
+
+                <!-- Existing notes -->
+                <div *ngFor="let note of event.notes" class="mt-2 p-2.5 rounded-lg bg-slate-800/60 text-xs">
+                  <div class="text-slate-300 whitespace-pre-wrap">{{ note.content }}</div>
+                  <div class="text-[10px] text-slate-500 mt-1.5 flex items-center justify-between">
+                    <span>{{ note.createdBy.firstName }} {{ note.createdBy.lastName }}</span>
+                    <button
+                      type="button"
+                      (click)="deleteNote(timeline()!.id, event.id, note.id); $event.stopPropagation()"
+                      class="text-red-400/70 hover:text-red-400 transition-colors"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Inline note form -->
+                <div
+                  *ngIf="activeNoteEventId() === event.id"
+                  class="mt-2"
+                  (click)="$event.stopPropagation()"
+                >
+                  <textarea
+                    [(ngModel)]="noteContent"
+                    rows="2"
+                    class="w-full px-2.5 py-2 rounded-lg bg-slate-800 border border-slate-700 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-sky-500 resize-none"
+                    placeholder="Add a note..."
+                  ></textarea>
+                  <div class="flex gap-2 mt-1.5">
+                    <button
+                      type="button"
+                      (click)="submitNote(event.id); $event.stopPropagation()"
+                      [disabled]="noteSubmitting()"
+                      class="px-2.5 py-1 rounded-lg bg-sky-600 hover:bg-sky-700 text-xs font-medium disabled:opacity-50 transition-colors"
+                    >
+                      {{ noteSubmitting() ? 'Saving...' : 'Save' }}
+                    </button>
+                    <button
+                      type="button"
+                      (click)="closeNoteForm(); $event.stopPropagation()"
+                      class="px-2.5 py-1 rounded-lg bg-slate-700 hover:bg-slate-600 text-xs transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Center dot on the timeline line -->
+        <div class="absolute left-4 lg:left-1/2 top-4 transform -translate-x-1/2 z-10">
+          <div
+            class="w-3.5 h-3.5 rounded-full border-2 border-slate-800 ring-2 ring-slate-900"
+            [class]="getCategoryDotColor(event.category)"
+          ></div>
+        </div>
+
+        <!-- Empty spacer for the opposite side (desktop only) -->
+        <div class="hidden lg:block lg:w-5/12"></div>
+      </div>
+    </div>
+  </div>
+</div>
