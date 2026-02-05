@@ -30,6 +30,20 @@ export class BreakingNewsComponent implements OnInit {
   loading = signal(false);
   error = signal<string | null>(null);
 
+  // Category filter
+  selectedCategory = signal<string>('');
+  readonly categories = [
+    'General Breaking News (Global)',
+    'Geopolitics',
+    'Europe & EU Politics',
+    'Business & Markets',
+    'Technology (Big Tech & Platforms)',
+    'Artificial Intelligence & Data Policy',
+    'Cybersecurity & Hacking Incidents',
+    'Climate, Energy',
+    'Sport',
+  ];
+
   enrichment = signal<BreakingNewsEnrichment | null>(null);
   enrichmentLoading = signal(false);
   enrichmentError = signal<string | null>(null);
@@ -77,12 +91,21 @@ export class BreakingNewsComponent implements OnInit {
     this.loadBreakingNews();
   }
 
+  onCategoryChange(category: string): void {
+    this.selectedCategory.set(category);
+    this.selectedId.set(null);
+    this.selectedItem.set(null);
+    this.enrichment.set(null);
+    this.loadBreakingNews();
+  }
+
   loadBreakingNews(): void {
     this.loading.set(true);
     this.error.set(null);
 
+    const category = this.selectedCategory() || undefined;
     this.breakingNewsService
-      .getAll(50, 0)
+      .getAll(50, 0, category)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (res) => {

@@ -54,7 +54,7 @@ OUTPUT
 - Keep writing short and neutral (analyst tone).
 
 FIELD RULES:
-- category: concise high-level label (e.g., conflict, disaster, politics, economy, crime, cyber, social, sports, other). Null if unclear.
+- category: one of the following fixed labels — "General Breaking News (Global)", "Geopolitics", "Europe & EU Politics", "Business & Markets", "Technology (Big Tech & Platforms)", "Artificial Intelligence & Data Policy", "Cybersecurity & Hacking Incidents", "Climate, Energy", "Sport". Pick the single best fit. Null if none apply.
 - context: 1–2 neutral sentences summarizing the claim/event. Use “allegedly”, “reportedly” if unconfirmed.
 - locations[]: Only if clearly implied in the TEXT (place, country if stated or strongly implied). Do NOT invent coordinates; set lat/lon = null unless explicitly present. If only a country/sea/strait is mentioned, use that as place; country may be null when unclear.
 - future_scenarios[]: 2–4 plausible developments tied to the tweet, each with likelihood 0..1 (calibrated).
@@ -162,7 +162,21 @@ const enrichmentSchema = {
     type: 'object',
     additionalProperties: false,
     properties: {
-      category:            { type: ['string','null'] },
+      category:            {
+        type: ['string','null'],
+        enum: [
+          'General Breaking News (Global)',
+          'Geopolitics',
+          'Europe & EU Politics',
+          'Business & Markets',
+          'Technology (Big Tech & Platforms)',
+          'Artificial Intelligence & Data Policy',
+          'Cybersecurity & Hacking Incidents',
+          'Climate, Energy',
+          'Sport',
+          null
+        ]
+      },
       context:             { type: ['string','null'] },
 
       locations: {

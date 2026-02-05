@@ -6,8 +6,19 @@ const BreakingNewsLive = require('../models/BreakingNewsLive');
 const BreakingNewsSearch = require('../models/BreakingNewsSearch'); 
 
 class BreakingNewsRepo {
-  async getAll({ limit = 50, offset = 0 } = {}) {
-    return BreakingNews.find()
+  async getAll({ limit = 50, offset = 0, category } = {}) {
+    let filter = {};
+
+    if (category) {
+      const enrichments = await BreakingNewsEnrichment.find(
+        { category },
+        { tweetId: 1 }
+      ).lean().exec();
+      const tweetIds = enrichments.map(e => e.tweetId);
+      filter = { tweetId: { $in: tweetIds } };
+    }
+
+    return BreakingNews.find(filter)
       .sort({ createdAt: -1 })
       .skip(offset)
       .limit(limit)
