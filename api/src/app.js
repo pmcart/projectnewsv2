@@ -49,6 +49,7 @@ app.use('/api/rss', require('./routes/rssFeedRoutes'));
 app.use('/api/jobs', require('./routes/jobsRoutes'));
 app.use('/api/documents', require('./routes/documentRoutes'));
 app.use('/api/videos', require('./routes/videoRoutes'));
+app.use('/api/timelines', require('./routes/timelineRoutes'));
 app.use('/api/stats', require('./routes/statsRoutes'));
 app.use('/api/super-admin', require('./routes/superAdminRoutes'));
 

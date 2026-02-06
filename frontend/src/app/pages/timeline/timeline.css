@@ -1,0 +1,48 @@
+/* Entry animation for timeline events */
+.timeline-event-enter {
+  opacity: 0;
+  transform: translateY(20px);
+  animation: timelineSlideIn 0.5s ease-out forwards;
+}
+
+@keyframes timelineSlideIn {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Category-specific glow on hover */
+.timeline-card-incident:hover {
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.12), 0 0 40px rgba(239, 68, 68, 0.06);
+}
+.timeline-card-signal:hover {
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.12), 0 0 40px rgba(245, 158, 11, 0.06);
+}
+.timeline-card-pattern:hover {
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.12), 0 0 40px rgba(168, 85, 247, 0.06);
+}
+.timeline-card-response:hover {
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.12), 0 0 40px rgba(59, 130, 246, 0.06);
+}
+.timeline-card-escalation:hover {
+  box-shadow: 0 0 20px rgba(249, 115, 22, 0.12), 0 0 40px rgba(249, 115, 22, 0.06);
+}
+.timeline-card-context:hover {
+  box-shadow: 0 0 20px rgba(100, 116, 139, 0.12), 0 0 40px rgba(100, 116, 139, 0.06);
+}
+
+/* Skeleton pulse animation */
+.timeline-skeleton-pulse {
+  animation: skeletonPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes skeletonPulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+
+/* Gradient line glow */
+.timeline-line-glow {
+  box-shadow: 0 0 8px rgba(100, 116, 139, 0.2);
+}

@@ -136,9 +136,15 @@ export class BreakingNewsService {
     });
   }
 
-  getAll(limit = 50, offset = 0): Observable<BreakingNews[]> {
+  getAll(limit = 50, offset = 0, category?: string): Observable<BreakingNews[]> {
+    const qs = new URLSearchParams({
+      limit: String(limit),
+      offset: String(offset),
+    });
+    if (category) qs.set('category', category);
+
     return this.http.get<BreakingNews[]>(
-      `${this.baseUrl}?limit=${limit}&offset=${offset}`,
+      `${this.baseUrl}?${qs.toString()}`,
       { headers: this.getHeaders() }
     );
   }

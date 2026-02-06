@@ -12,6 +12,7 @@ import {
 import { MediaEmbedComponent } from '../../shared/components/media-embed/media-embed.component';
 import { NewContentButtonComponent } from '../../shared/components/new-content-button/new-content-button.component';
 import { NewVideoButtonComponent } from '../../shared/components/new-video-button/new-video-button.component';
+import { GenerateTimelineButtonComponent } from '../../shared/components/generate-timeline-button/generate-timeline-button.component';
 import { EnrichmentViewComponent } from '../../shared/components/enrichment-view/enrichment-view.component';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
@@ -22,13 +23,27 @@ import { catchError, switchMap, tap, takeWhile } from 'rxjs/operators';
 @Component({
   selector: 'app-breaking-news',
   standalone: true,
-  imports: [CommonModule, FormsModule, MediaEmbedComponent, NewContentButtonComponent, NewVideoButtonComponent, EnrichmentViewComponent],
+  imports: [CommonModule, FormsModule, MediaEmbedComponent, NewContentButtonComponent, NewVideoButtonComponent, GenerateTimelineButtonComponent, EnrichmentViewComponent],
   templateUrl: './breaking-news.html'
 })
 export class BreakingNewsComponent implements OnInit {
   breakingNews = signal<BreakingNews[]>([]);
   loading = signal(false);
   error = signal<string | null>(null);
+
+  // Category filter
+  selectedCategory = signal<string>('');
+  readonly categories = [
+    'General Breaking News (Global)',
+    'Geopolitics',
+    'Europe & EU Politics',
+    'Business & Markets',
+    'Technology (Big Tech & Platforms)',
+    'Artificial Intelligence & Data Policy',
+    'Cybersecurity & Hacking Incidents',
+    'Climate, Energy',
+    'Sport',
+  ];
 
   enrichment = signal<BreakingNewsEnrichment | null>(null);
   enrichmentLoading = signal(false);
@@ -77,12 +92,21 @@ export class BreakingNewsComponent implements OnInit {
     this.loadBreakingNews();
   }
 
+  onCategoryChange(category: string): void {
+    this.selectedCategory.set(category);
+    this.selectedId.set(null);
+    this.selectedItem.set(null);
+    this.enrichment.set(null);
+    this.loadBreakingNews();
+  }
+
   loadBreakingNews(): void {
     this.loading.set(true);
     this.error.set(null);
 
+    const category = this.selectedCategory() || undefined;
     this.breakingNewsService
-      .getAll(50, 0)
+      .getAll(50, 0, category)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (res) => {

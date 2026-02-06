@@ -9,6 +9,7 @@ import { NewVideoComponent } from './pages/new-video/new-video';
 import { ContentReviewComponent } from './pages/content-review/content-review';
 import { LiveStreamsComponent } from './pages/live-streams/live-streams';
 import { AlertsComponent } from './pages/alerts/alerts';
+import { TimelineComponent } from './pages/timeline/timeline';
 import { authGuard } from './guards/auth.guard';
 import { superAdminGuard } from './guards/super-admin.guard';
 import { SuperAdminLayoutComponent } from './pages/super-admin/super-admin-layout/super-admin-layout';
@@ -89,6 +90,14 @@ export const routes: Routes = [
         data: {
           title: 'Alerts',
           subtitle: 'Configure keyword alerts for breaking news notifications.'
+        }
+      },
+      {
+        path: 'timeline/:id',
+        component: TimelineComponent,
+        data: {
+          title: 'Timeline',
+          subtitle: 'AI-generated timeline of related events and signals.'
         }
       }
 

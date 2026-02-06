@@ -4,8 +4,9 @@ async function listBreakingNews(req, res, next) {
   try {
     const limit = parseInt(req.query.limit, 10) || 50;
     const offset = parseInt(req.query.offset, 10) || 0;
+    const category = req.query.category || undefined;
 
-    const items = await breakingNewsRepo.getAll({ limit, offset });
+    const items = await breakingNewsRepo.getAll({ limit, offset, category });
     res.json(items);
   } catch (err) {
     next(err);
