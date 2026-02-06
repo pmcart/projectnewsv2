@@ -53,18 +53,19 @@ app.use('/api/stats', require('./routes/statsRoutes'));
 app.use('/api/super-admin', require('./routes/superAdminRoutes'));
 
 // Serve Angular static files in production
-if (process.env.NODE_ENV === 'production') {
-  const frontendPath = path.join(__dirname, '../../frontend/dist/frontend/browser');
-  app.use(express.static(frontendPath));
-
-  // Handle Angular routing - serve index.html for non-API routes
-  app.get('*', (req, res, next) => {
-    if (req.path.startsWith('/api/')) {
-      return next();
-    }
-    res.sendFile(path.join(frontendPath, 'index.html'));
-  });
-}
+// NOTE: Disabled since frontend is served by IIS
+// if (process.env.NODE_ENV === 'production') {
+//   const frontendPath = path.join(__dirname, '../../frontend/dist/frontend/browser');
+//   app.use(express.static(frontendPath));
+//
+//   // Handle Angular routing - serve index.html for non-API routes
+//   app.get('/:path(.*)', (req, res, next) => {
+//     if (req.path.startsWith('/api/')) {
+//       return next();
+//     }
+//     res.sendFile(path.join(frontendPath, 'index.html'));
+//   });
+// }
 
 // Error handler (last)
 app.use(errorHandler);
