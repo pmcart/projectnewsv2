@@ -19,7 +19,7 @@ class BreakingNewsRepo {
     }
 
     return BreakingNews.find(filter)
-      .sort({ createdAt: -1 })
+      .sort({ datetime: -1 })
       .skip(offset)
       .limit(limit)
       .lean()

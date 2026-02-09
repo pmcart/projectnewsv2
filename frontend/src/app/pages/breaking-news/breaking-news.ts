@@ -120,8 +120,8 @@ export class BreakingNewsComponent implements OnInit {
           this.loading.set(false);
 
           // Auto-select first item if none selected
-          if (!this.selectedId() && res.length > 0 && res[0].tweetId) {
-            this.openBreakingNewsDetail(res[0].tweetId!);
+          if (!this.selectedId() && sorted.length > 0 && sorted[0].tweetId) {
+            this.openBreakingNewsDetail(sorted[0].tweetId!);
           }
         },
         error: (err) => {
