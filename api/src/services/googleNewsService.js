@@ -503,9 +503,16 @@ async function fetchNews({ region, category, topic, enrich = 'light' }) {
       if (enriched?.normalizedLink) doc.normalizedLink = enriched.normalizedLink;
       if (enriched?.favicon) doc.favicon = enriched.favicon;
 
-      // Prefer OG image if RSS didn’t have one
+      // Prefer OG image over Google's placeholder images
       const og = enriched?.meta;
-      if (!doc.imageURL && og?.ogImageURL) doc.imageURL = og.ogImageURL;
+      const isGoogleImage = doc.imageURL && (
+        doc.imageURL.includes('lh3.googleusercontent.com') ||
+        doc.imageURL.includes('news.google.com') ||
+        doc.imageURL.includes('googleusercontent.com')
+      );
+      if (og?.ogImageURL && (!doc.imageURL || isGoogleImage)) {
+        doc.imageURL = og.ogImageURL;
+      }
 
       // Improve title/description from OG where needed
       if ((!doc.title || doc.title.length < 5) && og?.ogTitle) doc.title = og.ogTitle;
@@ -520,8 +527,11 @@ async function fetchNews({ region, category, topic, enrich = 'light' }) {
         doc.authors = ld.authors || [];
         doc.section = ld.section || null;
         doc.keywords = ld.keywords || [];
-        // If still no image, JSON-LD sometimes has one
-        if (!doc.imageURL && ld.image) doc.imageURL = ld.image;
+        // If still no image or Google placeholder, JSON-LD sometimes has one
+        const stillGoogleImage = doc.imageURL && doc.imageURL.includes('googleusercontent.com');
+        if (ld.image && (!doc.imageURL || stillGoogleImage)) {
+          doc.imageURL = ld.image;
+        }
         // If description is still weak, JSON-LD can help
         if ((!doc.description || doc.description.length < 20) && ld.description) doc.description = ld.description;
       }

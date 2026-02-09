@@ -18,13 +18,15 @@
     <!-- Persona -->
     <div class="control-group">
       <h3 class="text-sm font-semibold text-slate-200 mb-2">Persona</h3>
-      <input
-        type="text"
+      <select
         [(ngModel)]="personaName"
         [disabled]="disabled()"
-        placeholder="e.g., Government Spokesperson"
         class="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2"
-      />
+      >
+        @for (option of personaOptions; track option.value) {
+          <option [value]="option.value">{{ option.label }}</option>
+        }
+      </select>
       <textarea
         [(ngModel)]="personaDetails"
         [disabled]="disabled()"

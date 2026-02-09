@@ -29,7 +29,7 @@ export class GenerationControlsComponent implements OnInit {
   generate = output<GenerationRequest>();
 
   // Form state
-  personaName = signal('Government Spokesperson');
+  personaName = signal('Journalist');
   personaDetails = signal('');
   tone = signal('neutral');
   style = signal('AP_style');
@@ -90,11 +90,21 @@ export class GenerationControlsComponent implements OnInit {
     { value: 'Press_briefing', label: 'Press Briefing' }
   ];
 
+  personaOptions = [
+    { value: 'Journalist', label: 'Journalist' },
+    { value: 'PR / Communications Professional', label: 'PR / Communications Professional' },
+    { value: 'Politician / Public Official', label: 'Politician / Public Official' },
+    { value: 'Corporate Executive / Company Spokesperson', label: 'Corporate Executive / Company Spokesperson' },
+    { value: 'Content Marketer', label: 'Content Marketer' },
+    { value: 'Industry Analyst / Subject-Matter Expert', label: 'Industry Analyst / Subject-Matter Expert' },
+    { value: 'Academic / Researcher', label: 'Academic / Researcher' },
+    { value: 'Nonprofit / Advocacy Organization Leader', label: 'Nonprofit / Advocacy Organization Leader' },
+    { value: 'Influencer / Thought Leader', label: 'Influencer / Thought Leader' },
+    { value: 'Technical Writer / Developer Evangelist', label: 'Technical Writer / Developer Evangelist' }
+  ];
+
   ngOnInit() {
-    // Default persona based on source type
-    if (this.sourceType() === 'TWEET') {
-      this.personaName.set('Social Media Analyst');
-    }
+    // No initialization needed
   }
 
   onGenerate() {
